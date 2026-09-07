@@ -502,554 +502,344 @@ exports.routes = {
 
   // POST /admin/offers/:id/expire - Manually expire an offer (Phase 2 automation)
   'POST /admin/offers/{id}/expire': async (event) => {
-      const offerId = event.params?.id;
+    const offerId = event.params?.id;
 
-      if (!offerId) {
+    if (!offerId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: 'Bad Request',
+          message: 'Offer ID is required'
+        })
+      };
+    }
+
+    try {
+      if (event.env && event.env.DB) {
+        await event.env.DB.prepare(
+          'UPDATE offers SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        ).bind('expired', offerId).run();
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          message: 'Offer expired successfully',
+          id: offerId
+        })
+      };
+    } catch (err) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Internal Server Error',
+          message: err.message
+        })
+      };
+    }
+  },
+
+  // POST /track/click - Track a click on an offer (Phase 3: Tracking & Revenue)
+  'POST /track/click': async (event) => {
+    try {
+      const clickData = JSON.parse(event.body || '{}');
+
+      // Validate required fields
+      if (!clickData || !clickData.offer_id) {
         return {
           statusCode: 400,
           body: JSON.stringify({
             error: 'Bad Request',
-            message: 'Offer ID is required'
+            message: 'offer_id is required'
           })
         };
       }
 
+      const ipAddress = clickData.ip_address || 'unknown';
+      const userAgent = clickData.user_agent || '';
+      const timestamp = Date.now();
+      const idempotencyKey = `${clickData.offer_id}-${ipAddress}-${Math.floor(timestamp / 300000)}`;
+      const clickId = `click-${idempotencyKey}-${timestamp}`;
+
       try {
+        // Check idempotency: Query clicks table for same offer_id + ip_address + timestamp ± 5 min
+        if (event.env && event.env.DB) {
+          const existingClick = await event.env.DB.prepare(
+            'SELECT id FROM clicks WHERE offer_id = ? AND ip_address = ? AND timestamp >= datetime(CURRENT_TIMESTAMP, "-5 minute")'
+          ).bind(clickData.offer_id, ipAddress).all();
+
+          if (existingClick.results?.length > 0) {
+            // Duplicate click within 5 minutes - return existing click_id
+            return {
+              statusCode: 200,
+              body: JSON.stringify({
+                success: true,
+                click_id: existingClick.results[0].id,
+                message: 'Click tracked successfully (duplicate ignored)'
+              })
+            };
+          }
+        }
+
+        // Insert click into D1 database
+        const clickRecordId = `click-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         if (event.env && event.env.DB) {
           await event.env.DB.prepare(
-            'UPDATE offers SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-          ).bind('expired', offerId).run();
+            `INSERT INTO clicks (id, offer_id, user_id, ip_address, user_agent, referrer, timestamp, metadata)
+             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`
+          ).bind(
+            clickRecordId,
+            clickData.offer_id,
+            clickData.user_id || null,
+            ipAddress,
+            userAgent,
+            clickData.referrer || null,
+            JSON.stringify(clickData.metadata || {})
+          ).run();
+
+          // Update offer: Increment click_count
+          await event.env.DB.prepare(
+            'UPDATE offers SET click_count = click_count + 1 WHERE id = ?'
+          ).bind(clickData.offer_id).run();
         }
 
         return {
           statusCode: 200,
           body: JSON.stringify({
             success: true,
-            message: 'Offer expired successfully',
-            id: offerId
+            click_id: clickId,
+            message: 'Click tracked successfully'
           })
         };
-      } catch (err) {
+      } catch (dbErr) {
         return {
           statusCode: 500,
           body: JSON.stringify({
             error: 'Internal Server Error',
-            message: err.message
+            message: dbErr.message
           })
         };
-        };
       }
+    } catch (parseErr) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: 'Bad Request',
+          message: 'Invalid JSON in request body'
+        })
+      };
     }
+  },
 
-    // POST /track/click - Track a click on an offer (Phase 3: Tracking & Revenue)
-    'POST /track/click': async (event) => {
-      try {
-        const clickData = JSON.parse(event.body || '{}');
+  // POST /track/conversion - Track a conversion from an offer (Phase 3: Tracking & Revenue)
+  'POST /track/conversion': async (event) => {
+    try {
+      const conversionData = JSON.parse(event.body || '{}');
 
-        // Validate required fields
-        if (!clickData || !clickData.offer_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({
-              error: 'Bad Request',
-              message: 'offer_id is required'
-            })
-          };
-        }
-
-        const ipAddress = clickData.ip_address || 'unknown';
-        const userAgent = clickData.user_agent || '';
-        const timestamp = Date.now();
-        const idempotencyKey = `${clickData.offer_id}-${ipAddress}-${Math.floor(timestamp / 300000)}`;
-        const clickId = `click-${idempotencyKey}-${timestamp}`;
-
-        try {
-          // Check idempotency: Query clicks table for same offer_id + ip_address + timestamp ± 5 min
-          if (event.env && event.env.DB) {
-            const existingClick = await event.env.DB.prepare(
-              'SELECT id FROM clicks WHERE offer_id = ? AND ip_address = ? AND timestamp >= datetime(CURRENT_TIMESTAMP, "-5 minute")'
-            ).bind(clickData.offer_id, ipAddress).all();
-
-            if (existingClick.results?.length > 0) {
-              // Duplicate click within 5 minutes - return existing click_id
-              return {
-                statusCode: 200,
-                body: JSON.stringify({
-                  success: true,
-                  click_id: existingClick.results[0].id,
-                  message: 'Click tracked successfully (duplicate ignored)'
-                })
-              };
-            }
-          }
-
-          // Insert click into D1 database
-          const clickRecordId = `click-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-          if (event.env && event.env.DB) {
-            await event.env.DB.prepare(
-              `INSERT INTO clicks (id, offer_id, user_id, ip_address, user_agent, referrer, timestamp, metadata)
-               VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`
-            ).bind(
-              clickRecordId,
-              clickData.offer_id,
-              clickData.user_id || null,
-              ipAddress,
-              userAgent,
-              clickData.referrer || null,
-              JSON.stringify(clickData.metadata || {})
-            ).run();
-
-            // Update offer: Increment click_count
-            await event.env.DB.prepare(
-              'UPDATE offers SET click_count = click_count + 1 WHERE id = ?'
-            ).bind(clickData.offer_id).run();
-          }
-
-          return {
-            statusCode: 200,
-            body: JSON.stringify({
-              success: true,
-              click_id: clickId,
-              message: 'Click tracked successfully'
-            })
-          };
-        } catch (dbErr) {
-          return {
-            statusCode: 500,
-            body: JSON.stringify({
-              error: 'Internal Server Error',
-              message: dbErr.message
-            })
-          };
-        }
-      } catch (parseErr) {
+      // Validate required fields
+      if (!conversionData || !conversionData.offer_id) {
         return {
           statusCode: 400,
           body: JSON.stringify({
             error: 'Bad Request',
-            message: 'Invalid JSON in request body'
+            message: 'offer_id is required'
           })
         };
       }
-    },
 
-    // POST /track/conversion - Track a conversion from an offer (Phase 3: Tracking & Revenue)
-    'POST /track/conversion': async (event) => {
+      const timestamp = Date.now();
+      const conversionId = `conversion-${conversionData.offer_id}-${timestamp}`;
+
       try {
-        const conversionData = JSON.parse(event.body || '{}');
+        // Check idempotency: Query conversions table for same offer_id + source + timestamp ± 10 min
+        if (event.env && event.env.DB) {
+          const existingConversion = await event.env.DB.prepare(
+            'SELECT id FROM conversions WHERE offer_id = ? AND source = ? AND timestamp >= datetime(CURRENT_TIMESTAMP, "-10 minute")'
+          ).bind(conversionData.offer_id, conversionData.source || 'direct').all();
 
-        // Validate required fields
-        if (!conversionData || !conversionData.offer_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({
-              error: 'Bad Request',
-              message: 'offer_id is required'
-            })
-          };
-        }
-
-        const timestamp = Date.now();
-        const conversionId = `conversion-${conversionData.offer_id}-${timestamp}`;
-
-        try {
-          // Check idempotency: Query conversions table for same offer_id + source + timestamp ± 10 min
-          if (event.env && event.env.DB) {
-            const existingConversion = await event.env.DB.prepare(
-              'SELECT id FROM conversions WHERE offer_id = ? AND source = ? AND timestamp >= datetime(CURRENT_TIMESTAMP, "-10 minute")'
-            ).bind(conversionData.offer_id, conversionData.source || 'direct').all();
-
-            if (existingConversion.results?.length > 0) {
-              // Duplicate conversion within 10 minutes - return existing conversion_id
-              return {
-                statusCode: 200,
-                body: JSON.stringify({
-                  success: true,
-                  conversion_id: existingConversion.results[0].id,
-                  message: 'Conversion tracked successfully (duplicate ignored)'
-                })
-              };
-            }
-          }
-
-          // Insert conversion into D1 database
-          const conversionRecordId = `conversion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-          if (event.env && event.env.DB) {
-            await event.env.DB.prepare(
-              `INSERT INTO conversions (id, offer_id, user_id, source, amount, metadata, timestamp, status)
-               VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'pending')`
-            ).bind(
-              conversionRecordId,
-              conversionData.offer_id,
-              conversionData.user_id || null,
-              conversionData.source || 'direct',
-              conversionData.amount || 0,
-              JSON.stringify(conversionData.metadata || {})
-            ).run();
-
-            // Update offer: Increment conversion_count and add to revenue
-            await event.env.DB.prepare(
-              `UPDATE offers SET
-                 conversion_count = conversion_count + 1,
-                 revenue = revenue + ?,
-                 updated_at = CURRENT_TIMESTAMP
-               WHERE id = ?`
-            ).bind(
-              conversionData.amount || 0,
-              conversionData.offer_id
-            ).run();
-          }
-
-          return {
-            statusCode: 200,
-            body: JSON.stringify({
-              success: true,
-              conversion_id: conversionId,
-              message: 'Conversion tracked successfully'
-            })
-          };
-        } catch (dbErr) {
-          return {
-            statusCode: 500,
-            body: JSON.stringify({
-              error: 'Internal Server Error',
-              message: dbErr.message
-            })
-          };
-        }
-      } catch (parseErr) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({
-            error: 'Bad Request',
-            message: 'Invalid JSON in request body'
-          })
-        };
-      }
-    },
-
-    // GET /admin/revenue - Admin revenue dashboard (Phase 3: Tracking & Revenue)
-    'GET /admin/revenue': async (event) => {
-      try {
-        const { period = 'day', offer_id, start_date, end_date } = event.query || {};
-
-        if (!event.env || !event.env.DB) {
-          return {
-            statusCode: 200,
-            body: JSON.stringify({
-              revenue: [],
-              totals: {
-                gross: 0,
-                net: 0,
-                conversions: 0
-              }
-            })
-          };
-        }
-
-        // Build date range query
-        let dateCondition = '';
-        let dateParams = [];
-
-        if (offer_id) {
-          dateCondition = ' AND offer_id = ?';
-          dateParams.push(offer_id);
-        }
-
-        if (period === 'day') {
-          // Daily aggregation - use today's date
-          const today = new Date();
-          const todayStr = today.toISOString().split('T')[0];
-          dateCondition += ' AND period_date = ?';
-          dateParams.push(todayStr);
-        } else if (period === 'week') {
-          // Weekly aggregation
-          const today = new Date();
-          const startOfWeek = new Date(today);
-          startOfWeek.setDate(today.getDate() - today.getDay());
-          const weekStartStr = startOfWeek.toISOString().split('T')[0];
-          dateCondition += ' AND period_date >= ?';
-          dateParams.push(weekStartStr);
-        } else if (period === 'month') {
-          // Monthly aggregation
-          const today = new Date();
-          const monthStartStr = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-          dateCondition += ' AND period_date >= ?';
-          dateParams.push(monthStartStr);
-        } else {
-          // Default: no date filter, use provided dates
-          if (start_date) {
-            dateCondition += ' AND period_date >= ?';
-            dateParams.push(start_date);
-          }
-          if (end_date) {
-            dateCondition += ' AND period_date <= ?';
-            dateParams.push(end_date);
+          if (existingConversion.results?.length > 0) {
+            // Duplicate conversion within 10 minutes - return existing conversion_id
+            return {
+              statusCode: 200,
+              body: JSON.stringify({
+                success: true,
+                conversion_id: existingConversion.results[0].id,
+                message: 'Conversion tracked successfully (duplicate ignored)'
+              })
+            };
           }
         }
 
-        // Get revenue data
-        const revenueResult = await event.env.DB.prepare(
-          `SELECT c.offer_id, o.title as offer_title, c.source, SUM(c.amount) as amount, COUNT(c.id) as conversion_count, c.period_date
-           FROM revenue c
-           LEFT JOIN offers o ON c.offer_id = o.id
-           WHERE 1=1 ${dateCondition}
-           GROUP BY c.offer_id, c.source, c.period_date
-           ORDER BY c.period_date DESC, amount DESC`
-        ).bind(...dateParams).all();
+        // Insert conversion into D1 database
+        const conversionRecordId = `conversion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        // Get totals
-        const totalsResult = await event.env.DB.prepare(
-          `SELECT
-             SUM(amount) as gross,
-             SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END) as net,
-             COUNT(*) as conversions
-           FROM revenue
-           WHERE 1=1 ${dateCondition}
-           AND status = 'confirmed'`
-        ).bind(...dateParams).all();
+        if (event.env && event.env.DB) {
+          await event.env.DB.prepare(
+            `INSERT INTO conversions (id, offer_id, user_id, source, amount, metadata, timestamp, status)
+             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'pending')`
+          ).bind(
+            conversionRecordId,
+            conversionData.offer_id,
+            conversionData.user_id || null,
+            conversionData.source || 'direct',
+            conversionData.amount || 0,
+            JSON.stringify(conversionData.metadata || {})
+          ).run();
 
-        const revenueData = (revenueResult.results || []).map(r => ({
-          offer_id: r.offer_id,
-          offer_title: r.offer_title || 'Unknown Offer',
-          source: r.source || 'unknown',
-          amount: r.amount || 0,
-          conversion_count: r.conversion_count || 0,
-          period_date: r.period_date || new Date().toISOString().split('T')[0]
-        }));
-
-        const totals = {
-          gross: totalsResult.results?.[0]?.gross || 0,
-          net: totalsResult.results?.[0]?.net || 0,
-          conversions: totalsResult.results?.[0]?.conversions || 0
-        };
+          // Update offer: Increment conversion_count and add to revenue
+          await event.env.DB.prepare(
+            `UPDATE offers SET
+               conversion_count = conversion_count + 1,
+               revenue = revenue + ?,
+               updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`
+          ).bind(
+            conversionData.amount || 0,
+            conversionData.offer_id
+          ).run();
+        }
 
         return {
           statusCode: 200,
           body: JSON.stringify({
-            revenue: revenueData,
-            totals: totals
+            success: true,
+            conversion_id: conversionId,
+            message: 'Conversion tracked successfully'
           })
         };
-      } catch (err) {
+      } catch (dbErr) {
         return {
           statusCode: 500,
           body: JSON.stringify({
             error: 'Internal Server Error',
-            message: err.message
+            message: dbErr.message
           })
         };
       }
-    },
+    } catch (parseErr) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          error: 'Bad Request',
+          message: 'Invalid JSON in request body'
+        })
+      };
+    }
+  },
 
-    // POST /track/conversion - Track a conversion from an offer (Phase 3: Tracking & Revenue)
-    'POST /track/conversion': async (event) => {
-      try {
-        const conversionData = JSON.parse(event.body || '{}');
+  // GET /admin/revenue - Admin revenue dashboard (Phase 3: Tracking & Revenue)
+  'GET /admin/revenue': async (event) => {
+    try {
+      const { period = 'day', offer_id, start_date, end_date } = event.query || {};
 
-        // Validate required fields
-        if (!conversionData || !conversionData.offer_id) {
-          return {
-            statusCode: 400,
-            body: JSON.stringify({
-              error: 'Bad Request',
-              message: 'offer_id is required'
-            })
-          };
-        }
-
-        const timestamp = Date.now();
-        const conversionId = `conversion-${conversionData.offer_id}-${timestamp}`;
-
-        try {
-          // Check idempotency: Query conversions table for same offer_id + source + timestamp ± 10 min
-          if (event.env && event.env.DB) {
-            const existingConversion = await event.env.DB.prepare(
-              'SELECT id FROM conversions WHERE offer_id = ? AND source = ? AND timestamp >= datetime(CURRENT_TIMESTAMP, \"-10 minute\")'
-            ).bind(conversionData.offer_id, conversionData.source || 'direct').all();
-
-            if (existingConversion.results?.length > 0) {
-              // Duplicate conversion within 10 minutes - return existing conversion_id
-              return {
-                statusCode: 200,
-                body: JSON.stringify({
-                  success: true,
-                  conversion_id: existingConversion.results[0].id,
-                  message: 'Conversion tracked successfully (duplicate ignored)'
-                })
-              };
-            }
-          }
-
-          // Insert conversion into D1 database
-          const conversionRecordId = `conversion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-          if (event.env && event.env.DB) {
-            await event.env.DB.prepare(
-              `INSERT INTO conversions (id, offer_id, user_id, source, amount, metadata, timestamp, status)
-               VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'pending')`
-            ).bind(
-              conversionRecordId,
-              conversionData.offer_id,
-              conversionData.user_id || null,
-              conversionData.source || 'direct',
-              conversionData.amount || 0,
-              JSON.stringify(conversionData.metadata || {})
-            ).run();
-
-            // Update offer: Increment conversion_count and add to revenue
-            await event.env.DB.prepare(
-              `UPDATE offers SET
-                 conversion_count = conversion_count + 1,
-                 revenue = revenue + ?,
-                 updated_at = CURRENT_TIMESTAMP
-               WHERE id = ?`
-            ).bind(
-              conversionData.amount || 0,
-              conversionData.offer_id
-            ).run();
-          }
-
-          return {
-            statusCode: 200,
-            body: JSON.stringify({
-              success: true,
-              conversion_id: conversionId,
-              message: 'Conversion tracked successfully'
-            })
-          };
-        } catch (dbErr) {
-          return {
-            statusCode: 500,
-            body: JSON.stringify({
-              error: 'Internal Server Error',
-              message: dbErr.message
-            })
-          };
-        }
-      } catch (parseErr) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({
-            error: 'Bad Request',
-            message: 'Invalid JSON in request body'
-          })
-        };
-      }
-    },
-
-    // GET /admin/revenue - Admin revenue dashboard (Phase 3: Tracking & Revenue)
-    'GET /admin/revenue': async (event) => {
-      try {
-        const { period = 'day', offer_id, start_date, end_date } = event.query || {};
-
-        if (!event.env || !event.env.DB) {
-          return {
-            statusCode: 200,
-            body: JSON.stringify({
-              revenue: [],
-              totals: {
-                gross: 0,
-                net: 0,
-                conversions: 0
-              }
-            })
-          };
-        }
-
-        // Build date range query
-        let dateCondition = '';
-        let dateParams = [];
-
-        if (offer_id) {
-          dateCondition = ' AND offer_id = ?';
-          dateParams.push(offer_id);
-        }
-
-        if (period === 'day') {
-          // Daily aggregation - use today's date
-          const today = new Date();
-          const todayStr = today.toISOString().split('T')[0];
-          dateCondition += ' AND period_date = ?';
-          dateParams.push(todayStr);
-        } else if (period === 'week') {
-          // Weekly aggregation
-          const today = new Date();
-          const startOfWeek = new Date(today);
-          startOfWeek.setDate(today.getDate() - today.getDay());
-          const weekStartStr = startOfWeek.toISOString().split('T')[0];
-          dateCondition += ' AND period_date >= ?';
-          dateParams.push(weekStartStr);
-        } else if (period === 'month') {
-          // Monthly aggregation
-          const today = new Date();
-          const monthStartStr = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-          dateCondition += ' AND period_date >= ?';
-          dateParams.push(monthStartStr);
-        } else {
-          // Default: no date filter, use provided dates
-          if (start_date) {
-            dateCondition += ' AND period_date >= ?';
-            dateParams.push(start_date);
-          }
-          if (end_date) {
-            dateCondition += ' AND period_date <= ?';
-            dateParams.push(end_date);
-          }
-        }
-
-        // Get revenue data
-        const revenueResult = await event.env.DB.prepare(
-          `SELECT c.offer_id, o.title as offer_title, c.source, SUM(c.amount) as amount, COUNT(c.id) as conversion_count, c.period_date
-           FROM revenue c
-           LEFT JOIN offers o ON c.offer_id = o.id
-           WHERE 1=1 ${dateCondition}
-           GROUP BY c.offer_id, c.source, c.period_date
-           ORDER BY c.period_date DESC, amount DESC`
-        ).bind(...dateParams).all();
-
-        // Get totals
-        const totalsResult = await event.env.DB.prepare(
-          `SELECT
-             SUM(amount) as gross,
-             SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END) as net,
-             COUNT(*) as conversions
-           FROM revenue
-           WHERE 1=1 ${dateCondition}
-           AND status = 'confirmed'`
-        ).bind(...dateParams).all();
-
-        const revenueData = (revenueResult.results || []).map(r => ({
-          offer_id: r.offer_id,
-          offer_title: r.offer_title || 'Unknown Offer',
-          source: r.source || 'unknown',
-          amount: r.amount || 0,
-          conversion_count: r.conversion_count || 0,
-          period_date: r.period_date || new Date().toISOString().split('T')[0]
-        }));
-
-        const totals = {
-          gross: totalsResult.results?.[0]?.gross || 0,
-          net: totalsResult.results?.[0]?.net || 0,
-          conversions: totalsResult.results?.[0]?.conversions || 0
-        };
-
+      if (!event.env || !event.env.DB) {
         return {
           statusCode: 200,
           body: JSON.stringify({
-            revenue: revenueData,
-            totals: totals
-          })
-        };
-      } catch (err) {
-        return {
-          statusCode: 500,
-          body: JSON.stringify({
-            error: 'Internal Server Error',
-            message: err.message
+            revenue: [],
+            totals: {
+              gross: 0,
+              net: 0,
+              conversions: 0
+            }
           })
         };
       }
-    },
+
+      // Build date range query
+      let dateCondition = '';
+      let dateParams = [];
+
+      if (offer_id) {
+        dateCondition = ' AND offer_id = ?';
+        dateParams.push(offer_id);
+      }
+
+      if (period === 'day') {
+        // Daily aggregation - use today's date
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        dateCondition += ' AND period_date = ?';
+        dateParams.push(todayStr);
+      } else if (period === 'week') {
+        // Weekly aggregation
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        const weekStartStr = startOfWeek.toISOString().split('T')[0];
+        dateCondition += ' AND period_date >= ?';
+        dateParams.push(weekStartStr);
+      } else if (period === 'month') {
+        // Monthly aggregation
+        const today = new Date();
+        const monthStartStr = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        dateCondition += ' AND period_date >= ?';
+        dateParams.push(monthStartStr);
+      } else {
+        // Default: no date filter, use provided dates
+        if (start_date) {
+          dateCondition += ' AND period_date >= ?';
+          dateParams.push(start_date);
+        }
+        if (end_date) {
+          dateCondition += ' AND period_date <= ?';
+          dateParams.push(end_date);
+        }
+      }
+
+      // Get revenue data
+      const revenueResult = await event.env.DB.prepare(
+        `SELECT c.offer_id, o.title as offer_title, c.source, SUM(c.amount) as amount, COUNT(c.id) as conversion_count, c.period_date
+         FROM revenue c
+         LEFT JOIN offers o ON c.offer_id = o.id
+         WHERE 1=1 ${dateCondition}
+         GROUP BY c.offer_id, c.source, c.period_date
+         ORDER BY c.period_date DESC, amount DESC`
+      ).bind(...dateParams).all();
+
+      // Get totals
+      const totalsResult = await event.env.DB.prepare(
+        `SELECT
+           SUM(amount) as gross,
+           SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END) as net,
+           COUNT(*) as conversions
+         FROM revenue
+         WHERE 1=1 ${dateCondition}
+         AND status = 'confirmed'`
+      ).bind(...dateParams).all();
+
+      const revenueData = (revenueResult.results || []).map(r => ({
+        offer_id: r.offer_id,
+        offer_title: r.offer_title || 'Unknown Offer',
+        source: r.source || 'unknown',
+        amount: r.amount || 0,
+        conversion_count: r.conversion_count || 0,
+        period_date: r.period_date || new Date().toISOString().split('T')[0]
+      }));
+
+      const totals = {
+        gross: totalsResult.results?.[0]?.gross || 0,
+        net: totalsResult.results?.[0]?.net || 0,
+        conversions: totalsResult.results?.[0]?.conversions || 0
+      };
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          revenue: revenueData,
+          totals: totals
+        })
+      };
+    } catch (err) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Internal Server Error',
+          message: err.message
+        })
+      };
+    }
+  }
+};
