@@ -1,0 +1,25 @@
+name = "cpajobs"
+main = "src/main.js"
+
+# Cloudflare KV namespace configuration
+kv_namespaces = [
+  { binding = "CPAJOBS_KV", id = "cpajobs-kv" }
+]
+
+# D1 database configuration
+d1_databases = [
+  { binding = "DB", database_name = "cpajobs-db" }
+]
+
+# Cloudflare Workers routes matching the blueprint exactly
+# Phase 1 API endpoints
+routes = [
+  "/offers",
+  "/offers/{id}",
+  "/track/click",
+  "/track/conversion",
+  "/health"
+]
+
+# Compatibility date for Cloudflare Workers
+compatibility_date = "2026-09-03"
