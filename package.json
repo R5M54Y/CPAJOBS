@@ -1,7 +1,8 @@
 {
   "name": "cpajobs",
   "version": "1.0.0",
-  "description": "CPA JOBS MVP - Cost-Per-Action job listing platform on GitHub + Cloudflare free tier",
+  "type": "module",
+  "description": "CPA JOBS MVP - Hybrid Job Portal with CPA Monetization",
   "main": "src/main.js",
   "scripts": {
     "test": "node -e \"console.log('Running Phase 1 tests...'); console.log('Verifying API routes...'); console.log('Verifying database schema...'); console.log('Verifying KV configuration...'); console.log('Phase 1 tests passed!')\"",
@@ -23,7 +24,6 @@
     "type": "git",
     "url": "git+https://github.com/R5M54Y/CPAJOBS.git"
   },
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/R5M54Y/CPAJOBS/issues"
   },

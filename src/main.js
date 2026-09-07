@@ -4,7 +4,7 @@
 */
 
 // Health check endpoint - checks infrastructure status
-exports.health = async (event, env) => {
+const health = async (event, env) => {
   // Try to connect to D1 database
   let dbStatus = 'disconnected';
   let kvStatus = 'unavailable';
@@ -45,7 +45,7 @@ exports.health = async (event, env) => {
 };
 
 // Minimal routes for Phase 2 - API endpoints using D1 and KV
-exports.routes = {
+const routes = {
   // GET /offers - List all active offers with optional filtering by category and status
   'GET /offers': async (event) => {
     const { category, status, page = 1, limit = 20 } = event.query || {};
@@ -841,5 +841,89 @@ exports.routes = {
         })
       };
     }
+  }
+};
+
+// Cloudflare Workers fetch event handler
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    // Health check endpoint
+    if (path === '/health') {
+      return new Response(
+        JSON.stringify({
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          database: env.DB ? 'connected' : 'disconnected',
+          cache: env.CPAJOBS_KV ? 'available' : 'unavailable',
+          phase: '2-offer-engine'
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Match routes from routes object
+    const method = request.method;
+    const routeKey = `${method} ${path}`;
+
+    // Try exact match first
+    if (routes[routeKey]) {
+      const event = {
+        request,
+        params: {},
+        query: Object.fromEntries(url.searchParams),
+        body: request.method !== 'GET' ? await request.text() : null,
+        env
+      };
+
+      const result = await routes[routeKey](event);
+      return new Response(result.body, {
+        status: result.statusCode,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Try parameterized routes (e.g., /offers/{id})
+    for (const [routePattern, handler] of Object.entries(routes)) {
+      const [routeMethod, routePath] = routePattern.split(' ');
+      if (routeMethod !== method) continue;
+
+      const paramRegex = routePath.replace(/\{(\w+)\}/g, '(?<$1>[^/]+)');
+      const regex = new RegExp(`^${paramRegex}$`);
+      const match = path.match(regex);
+
+      if (match) {
+        const event = {
+          request,
+          params: match.groups || {},
+          query: Object.fromEntries(url.searchParams),
+          body: request.method !== 'GET' ? await request.text() : null,
+          env
+        };
+
+        const result = await handler(event);
+        return new Response(result.body, {
+          status: result.statusCode,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Serve static files
+    if (path === '/' || path === '/index.html') {
+      // Return frontend landing page
+      return new Response('Frontend serving not implemented', {
+        status: 501,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+
+    // 404 Not Found
+    return new Response(JSON.stringify({ error: 'Not Found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 };

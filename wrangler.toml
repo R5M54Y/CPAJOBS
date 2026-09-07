@@ -3,7 +3,7 @@ main = "src/main.js"
 
 # Cloudflare KV namespace configuration
 kv_namespaces = [
-  { binding = "CPAJOBS_KV", id = "cpajobs-kv" }
+  { binding = "CPAJOBS_KV", id = "c50ca671669c49f59c9b16b76cefa690" }
 ]
 
 # D1 database configuration
@@ -13,18 +13,14 @@ d1_databases = [
 
 # Cloudflare Workers routes matching the blueprint exactly
 # Phase 1 API endpoints
-routes = [
-  "/offers",
-  "/offers/{id}",
-  "/track/click",
-  "/track/conversion",
-  "/categories",
-  "/admin/offers",
-  "/admin/offers/{id}",
-  "/admin/offers/{id}/expire",
-  "/admin/revenue",
-  "/health"
-]
+# Routes are handled internally by the fetch handler
+# For production deployment with custom domain, add routes here
+# routes = [
+#   "example.com/offers",
+#   "example.com/offers/:id",
+#   "example.com/track/click",
+#   ...
+# ]
 
 # Compatibility date for Cloudflare Workers
 compatibility_date = "2026-09-03"
