@@ -63,17 +63,21 @@ const routes = {
       let sql = 'SELECT o.*, c.name as category_name, c.slug as category_slug FROM offers o LEFT JOIN categories c ON o.category_id = c.id WHERE 1=1';
       const params = [];
 
+      // Build WHERE conditions for both main query and count query
+      let whereConditions = '';
+
       if (category) {
-        sql += ' AND c.slug = ?';
+        whereConditions += ' AND c.slug = ?';
         params.push(category);
       }
 
       if (status) {
-        sql += ' AND o.status = ?';
+        whereConditions += ' AND o.status = ?';
         params.push(status);
       }
 
-      sql += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+      sql += whereConditions + ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+      const filterParams = [...params]; // Save filter params for count query
       params.push(limit, (page - 1) * limit);
 
       // Use D1 database if available
@@ -100,8 +104,9 @@ const routes = {
           requirements: offer.requirements ? JSON.parse(offer.requirements) : []
         }));
 
-        // Get total count without LIMIT/OFFSET
-        const countResult = await event.env.DB.prepare('SELECT COUNT(*) as cnt FROM offers o LEFT JOIN categories c ON o.category_id = c.id WHERE 1=1').bind(...params.slice(0, 2)).all();
+        // Get total count with same WHERE conditions
+        const countSql = 'SELECT COUNT(*) as cnt FROM offers o LEFT JOIN categories c ON o.category_id = c.id WHERE 1=1' + whereConditions;
+        const countResult = await event.env.DB.prepare(countSql).bind(...filterParams).all();
         const total = countResult.results?.[0]?.cnt || 0;
         const total_pages = Math.ceil(total / Number(limit));
 
