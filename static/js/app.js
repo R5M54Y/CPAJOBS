@@ -26,7 +26,7 @@ class CPAJobsApp {
   async handleRoute() {
     const hash = window.location.hash.slice(1) || 'landing';
     this.state.currentView = hash;
-    
+
     switch (hash) {
       case 'landing':
         await this.loadLanding();
@@ -43,7 +43,7 @@ class CPAJobsApp {
       default:
         await this.loadLanding();
     }
-    
+
     this.render();
   }
 
@@ -51,21 +51,21 @@ class CPAJobsApp {
     try {
       this.setLoading(true);
       this.state.error = null;
-      
+
       // Load featured offers
       const response = await this.apiCall('/offers', { status: 'active', limit: 6 });
       if (response.ok) {
         const data = await response.json();
         this.state.offers = data.offers || [];
       }
-      
+
       // Load categories for navigation
       const categoriesResponse = await this.apiCall('/categories');
       if (categoriesResponse.ok) {
         const data = await categoriesResponse.json();
         this.state.categories = data.categories || [];
       }
-      
+
     } catch (error) {
       this.state.error = 'Failed to load landing page data';
       console.error('Landing load error:', error);
@@ -78,20 +78,20 @@ class CPAJobsApp {
     try {
       this.setLoading(true);
       this.state.error = null;
-      
+
       const response = await this.apiCall('/categories');
       if (response.ok) {
         const data = await response.json();
         this.state.categories = data.categories || [];
       }
-      
+
       // Also load offers for category page
       const offersResponse = await this.apiCall('/offers', { status: 'active', limit: 20 });
       if (offersResponse.ok) {
         const data = await offersResponse.json();
         this.state.offers = data.offers || [];
       }
-      
+
     } catch (error) {
       this.state.error = 'Failed to load categories';
       console.error('Categories load error:', error);
@@ -103,16 +103,16 @@ class CPAJobsApp {
   loadOfferDetail() {
     const urlParams = new URLSearchParams(window.location.search);
     const offerId = urlParams.get('id');
-    
+
     if (!offerId) {
       this.state.error = 'Offer ID not found';
       this.navigate('landing');
       return;
     }
-    
+
     this.setLoading(true);
     this.state.error = null;
-    
+
     // Load specific offer
     this.apiCall(`/offers/${offerId}`)
       .then(response => {
@@ -148,17 +148,17 @@ class CPAJobsApp {
         referrer: userData.referrer || '',
         metadata: userData.metadata || {}
       };
-      
+
       const response = await this.apiCall('/track/click', 'POST', payload);
       const data = await response.json();
-      
+
       return {
         success: response.ok,
         clickId: data.click_id,
         message: data.message,
         error: !response.ok ? data.error : null
       };
-      
+
     } catch (error) {
       console.error('Click tracking error:', error);
       return {
@@ -168,19 +168,51 @@ class CPAJobsApp {
     }
   }
 
-  async apiCall(endpoint, method = 'GET', body = null) {
-    const url = this.baseUrl + endpoint;
+  async apiCall(endpoint, params = null, body = null) {
+    // Handle both old signature (method as string) and new signature (params as object)
+    let method = 'GET';
+    let queryParams = null;
+
+    if (typeof params === 'string') {
+      // Old signature: apiCall(endpoint, method, body)
+      method = params;
+      queryParams = null;
+    } else if (typeof params === 'object' && params !== null && body === null) {
+      // New signature: apiCall(endpoint, {params})
+      queryParams = params;
+      method = 'GET';
+    } else if (typeof params === 'object' && typeof body === 'object') {
+      // New signature: apiCall(endpoint, params, body)
+      queryParams = params;
+      method = 'POST';
+    }
+
+    let url = this.baseUrl + endpoint;
+
+    // Build query string if params provided
+    if (queryParams && method === 'GET') {
+      const searchParams = new URLSearchParams();
+      Object.keys(queryParams).forEach(key => {
+        if (queryParams[key] !== null && queryParams[key] !== undefined) {
+          searchParams.append(key, queryParams[key]);
+        }
+      });
+      if (searchParams.toString()) {
+        url += '?' + searchParams.toString();
+      }
+    }
+
     const options = {
       method,
       headers: {
         'Content-Type': 'application/json'
       }
     };
-    
+
     if (body) {
       options.body = JSON.stringify(body);
     }
-    
+
     try {
       const response = await fetch(url, options);
       return response;
@@ -202,9 +234,9 @@ class CPAJobsApp {
   render() {
     const app = document.getElementById('app');
     if (!app) return;
-    
+
     let html = '';
-    
+
     switch (this.state.currentView) {
       case 'landing':
         html = this.renderLanding();
@@ -221,7 +253,7 @@ class CPAJobsApp {
       default:
         html = this.renderLanding();
     }
-    
+
     app.innerHTML = html;
     this.attachEventListeners();
   }
@@ -255,10 +287,10 @@ class CPAJobsApp {
   }
 
   renderCategories() {
-    const filteredOffers = this.state.selectedCategory 
+    const filteredOffers = this.state.selectedCategory
       ? this.state.offers.filter(offer => offer.category?.slug === this.state.selectedCategory)
       : this.state.offers;
-    
+
     return `
       <div class="categories-container">
         <h2>Categories</h2>
@@ -272,7 +304,7 @@ class CPAJobsApp {
             </button>
           </button>
         </div>
-        
+
         <div class="offer-grid">
           ${filteredOffers.map(offer => this.renderOfferCard(offer)).join('')}
         </div>
@@ -284,25 +316,25 @@ class CPAJobsApp {
     if (!this.state.selectedOffer) {
       return `<p>Offer not found or loading...</p>`;
     }
-    
+
     const offer = this.state.selectedOffer;
-    
+
     return `
       <div class="offer-detail">
         <button onclick="app.navigate('landing')" class="back-btn">← Back</button>
-        
+
         <div class="offer-detail-card">
           <h1>${offer.title}</h1>
           <div class="offer-meta">
             <span class="category">${offer.category?.name || 'General'}</span>
             <span class="status">${offer.status}</span>
           </div>
-          
+
           <div class="offer-description">
             <h3>Description</h3>
             <p>${offer.description}</p>
           </div>
-          
+
           <div class="offer-info">
             <div class="info-item">
               <strong>Payout:</strong> $${offer.payout} ${offer.payout_type}
@@ -317,13 +349,13 @@ class CPAJobsApp {
               <strong>Conversions:</strong> ${offer.conversion_count || 0}
             </div>
           </div>
-          
+
           <div class="offer-requirements">
             <h3>Requirements</h3>
             <ul>
               ${offer.requirements?.map(req => `<li>${req}</li>`).join('') || '<li>No specific requirements</li>'}
             </div>
-          
+
           <div class="offer-cta">
             <a href="${offer.url}" target="_blank" class="cta-button" onclick="app.handleOfferClick('${offer.id}')">
               Apply Now
@@ -339,13 +371,13 @@ class CPAJobsApp {
       <div class="admin-panel">
         <h2>Admin Dashboard</h2>
         <p>Admin functionality using existing backend endpoints</p>
-        
+
         <div class="admin-actions">
           <button onclick="app.navigate('landing')" class="admin-btn">Back to Site</button>
           <button onclick="app.loadOffersAdmin()" class="admin-btn">Manage Offers</button>
           <button onclick="app.loadRevenueAdmin()" class="admin-btn">View Revenue</button>
         </div>
-        
+
         <div id="admin-content">
           <p>Admin interface coming soon...</p>
         </div>
@@ -386,9 +418,9 @@ class CPAJobsApp {
         timestamp: new Date().toISOString()
       }
     };
-    
+
     const result = await this.trackClick(offerId, clickData);
-    
+
     if (result.success) {
       console.log('Click tracked successfully:', result);
       // The backend handles the actual redirect to the CPA destination
@@ -402,4 +434,13 @@ class CPAJobsApp {
       return false;
     }
   }
+}
+
+// Initialize the app when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    window.app = new CPAJobsApp();
+  });
+} else {
+  window.app = new CPAJobsApp();
 }
