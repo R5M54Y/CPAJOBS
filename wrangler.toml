@@ -18,6 +18,11 @@ routes = [
   "/offers/{id}",
   "/track/click",
   "/track/conversion",
+  "/categories",
+  "/admin/offers",
+  "/admin/offers/{id}",
+  "/admin/offers/{id}/expire",
+  "/admin/revenue",
   "/health"
 ]
 

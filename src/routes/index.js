@@ -112,26 +112,84 @@ async function getOffer(id) {
 }
 
 // POST /track/click - Track a click on an offer
-async function trackClick(clickData) {
+async function trackClick(clickData, env) {
   // Validate required fields
   if (!clickData || !clickData.offer_id) {
     return {
-      error: 'Bad Request',
-      message: 'offer_id is required'
+      statusCode: 400,
+      body: JSON.stringify({
+        error: 'Bad Request',
+        message: 'offer_id is required'
+      })
     };
   }
 
-  // Generate click ID (using timestamp-based for uniqueness)
+  const ipAddress = clickData.ip_address || 'unknown';
+  const userAgent = clickData.user_agent || '';
   const timestamp = Date.now();
-  const clickId = `click-${clickData.offer_id}-${timestamp}`;
+  const idempotencyKey = `${clickData.offer_id}-${ipAddress}-${Math.floor(timestamp / 300)}`;
+  const clickId = `click-${idempotencyKey}-${timestamp}`;
 
-  // In production: insert into clicks table
-  // In development: return success
-  return {
-    success: true,
-    click_id: clickId,
-    message: 'Click tracked successfully'
-  };
+  try {
+    // Check idempotency: Query clicks table for same offer_id + ip_address + timestamp ± 5 min
+    if (event && event.env && event.env.DB) {
+      const existingClick = await event.env.DB.prepare(
+        'SELECT id FROM clicks WHERE offer_id = ? AND ip_address = ? AND timestamp >= datetime(CURRENT_TIMESTAMP, \"-5 minute\")'
+      ).bind(clickData.offer_id, ipAddress).all();
+
+      if (existingClick.results?.length > 0) {
+        // Duplicate click within 5 minutes - return existing click_id
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            success: true,
+            click_id: existingClick.results[0].id,
+            message: 'Click tracked successfully (duplicate ignored)'
+          })
+        };
+      }
+    }
+
+    // Insert click into D1 database
+    const clickRecordId = `click-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    if (event && event.env && event.env.DB) {
+      await event.env.DB.prepare(
+        `INSERT INTO clicks (id, offer_id, user_id, ip_address, user_agent, referrer, timestamp, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`
+      ).bind(
+        clickRecordId,
+        clickData.offer_id,
+        clickData.user_id || null,
+        ipAddress,
+        userAgent,
+        clickData.referrer || null,
+        JSON.stringify(clickData.metadata || {})
+      ).run();
+
+      // Update offer: Increment click_count
+      await event.env.DB.prepare(
+        'UPDATE offers SET click_count = click_count + 1 WHERE id = ?'
+      ).bind(clickData.offer_id).run();
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        click_id: clickId,
+        message: 'Click tracked successfully'
+      })
+    };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: 'Internal Server Error',
+        message: err.message
+      })
+    };
+  }
 }
 
 // POST /track/conversion - Track a conversion from an offer
