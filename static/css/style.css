@@ -1,0 +1,91 @@
+/* static/css/style.css - CPA JOBS MVP Styles
+   Phase 0: Foundation - Basic styling */
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #fafafa;
+  color: #333;
+}
+
+header {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem 2rem;
+}
+
+.nav {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #007acc;
+  text-decoration: none;
+}
+
+.nav-links a {
+  margin-left: 1rem;
+  color: #333;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.hero {
+  max-width: 1200px;
+  margin: 3rem auto;
+  padding: 2rem;
+  text-align: center;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.hero h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.offer-list {
+  max-width: 1200px;
+  margin: 2rem auto;
+}
+
+.offer-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.offer-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.offer-card p {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0.2rem 0;
+}
+
+footer {
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+  padding: 1rem 2rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #888;
+}
