@@ -113,7 +113,7 @@ const offers = async (req, env) => {
   }
 };
 
-// Get single offer by ID
+// Get single offer by ID or external_id
 const getOffer = async (offerId, env) => {
   try {
     const result = await env.DB.prepare(`
@@ -121,7 +121,7 @@ const getOffer = async (offerId, env) => {
         o.id, o.external_id, o.title, o.description, o.description_html,
         o.url, o.apply_url, o.payout, o.payout_type,
         o.company, o.company_domain, o.company_logo,
-        o.location, o.location_city, o.location_state, o.location_country, o.location_country_code, o.remote,
+        o.location_city, o.location_state, o.location_country, o.location_country_code, o.remote,
         o.employment_type, o.experience, o.skills,
         o.salary_min, o.salary_max, o.salary_currency, o.salary_period, o.salary_display,
         o.requirements, o.status, o.expires_at, o.date_posted, o.valid_through,
@@ -132,8 +132,8 @@ const getOffer = async (offerId, env) => {
       FROM offers o
       LEFT JOIN categories c ON o.category_id = c.id
       LEFT JOIN offer_sources s ON o.source_id = s.id
-      WHERE o.id = ?
-    `).bind(offerId).first();
+      WHERE o.id = ? OR o.external_id = ?
+    `).bind(offerId, offerId).first();
 
     if (!result) {
       return new Response(JSON.stringify({ error: 'Offer not found' }), {
@@ -158,7 +158,7 @@ const getOffer = async (offerId, env) => {
       company: result.company,
       company_domain: result.company_domain,
       company_logo: result.company_logo,
-      location: result.location,
+      location: [result.location_city, result.location_state, result.location_country].filter(Boolean).join(', '),
       location_city: result.location_city,
       location_state: result.location_state,
       location_country: result.location_country,
