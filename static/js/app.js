@@ -140,6 +140,7 @@ class CPAJobsApp {
       console.error('Offer detail error:', error);
     } finally {
       this.setLoading(false);
+      this.render();
     }
   }
 
