@@ -332,49 +332,74 @@ class CPAJobsApp {
       return `<p>Offer not found or loading...</p>`;
     }
 
-    const offer = this.state.selectedOffer;
+    const o = this.state.selectedOffer;
+    const salary = o.salary || {};
+    const hasCompany = o.company || o.company_domain;
+    const hasLocation = o.location || o.location_city || o.location_country;
+    const hasSalary = salary.min || salary.max || salary.display;
 
     return `
       <div class="offer-detail">
         <button onclick="app.navigate('landing')" class="back-btn">← Back</button>
 
         <div class="offer-detail-card">
-          <h1>${offer.title}</h1>
-          <div class="offer-meta">
-            <span class="category">${offer.category?.name || 'General'}</span>
-            <span class="status">${offer.status}</span>
+          <h1>${o.title}</h1>
+          
+          <div class="job-header-meta">
+            ${hasCompany ? `<div class="meta-item"><strong>Company:</strong> ${o.company}${o.company_domain ? ` (${o.company_domain})` : ''}</div>` : ''}
+            ${hasLocation ? `<div class="meta-item"><strong>Location:</strong> ${o.location || [o.location_city, o.location_state, o.location_country].filter(Boolean).join(', ')}</div>` : ''}
+            ${o.remote !== undefined ? `<div class="meta-item"><strong>Remote:</strong> ${o.remote ? 'Yes' : 'On-site'}</div>` : ''}
+            ${o.employment_type ? `<div class="meta-item"><strong>Employment:</strong> ${o.employment_type}</div>` : ''}
           </div>
 
-          <div class="offer-description">
-            <h3>Description</h3>
-            <p>${offer.description}</p>
+          ${hasSalary ? `
+          <div class="salary-section">
+            <h3>Compensation</h3>
+            <div class="salary-display">
+              ${salary.display || (salary.min || salary.max) ? `${salary.display || `${salary.currency || ''} ${salary.min || ''}${salary.min && salary.max ? ' - ' : ''}${salary.max || ''} ${salary.period || 'per month'}`}` : 'Not specified'}
+            </div>
+          </div>` : ''}
+
+          ${o.description_html || o.description ? `
+          <div class="description-section">
+            <h3>Job Description</h3>
+            <div class="description-content">
+              ${o.description_html ? o.description_html : `<p>${o.description}</p>`}
+            </div>
+          </div>` : ''}
+
+          ${o.experience ? `
+          <div class="job-details">
+            <h3>Experience Required</h3>
+            <p>${o.experience}</p>
+          </div>` : ''}
+
+          ${o.skills && o.skills.length > 0 ? `
+          <div class="skills-section">
+            <h3>Skills</h3>
+            <div class="skills-list">
+              ${o.skills.map(skill => `<span class="skill-badge">${skill}</span>`).join('')}
+            </div>
+          </div>` : ''}
+
+          <div class="offer-footer-info">
+            <div class="info-item">
+              <strong>Status:</strong> <span class="status-badge ${o.status}">${o.status}</span>
+            </div>
+            ${o.date_posted ? `<div class="info-item"><strong>Posted:</strong> ${new Date(o.date_posted).toLocaleDateString()}</div>` : ''}
+            ${o.valid_through ? `<div class="info-item"><strong>Apply By:</strong> ${new Date(o.valid_through).toLocaleDateString()}</div>` : ''}
+            <div class="info-item"><strong>Views:</strong> ${o.click_count || 0}</div>
           </div>
 
-          <div class="offer-info">
-            <div class="info-item">
-              <strong>Payout:</strong> $${offer.payout} ${offer.payout_type}
-            </div>
-            <div class="info-item">
-              <strong>Expires:</strong> ${offer.expires_at ? new Date(offer.expires_at).toLocaleDateString() : 'No expiration'}
-            </div>
-            <div class="info-item">
-              <strong>Clicks:</strong> ${offer.click_count || 0}
-            </div>
-            <div class="info-item">
-              <strong>Conversions:</strong> ${offer.conversion_count || 0}
-            </div>
-          </div>
-
-          <div class="offer-requirements">
-            <h3>Requirements</h3>
-            <ul>
-              ${offer.requirements?.map(req => `<li>${req}</li>`).join('') || '<li>No specific requirements</li>'}
-            </div>
+          ${o.source ? `
+          <div class="source-section">
+            <p><small>Source: <strong>${o.source.name}</strong> | <a href="${o.url}" target="_blank">View Original</a></small></p>
+          </div>` : ''}
 
           <div class="offer-cta">
-            <a href="${offer.url}" target="_blank" class="cta-button" onclick="app.handleOfferClick('${offer.id}')">
+            <a href="${o.apply_url || o.url}" target="_blank" class="cta-button" onclick="app.handleOfferClick('${o.id}')">
               Apply Now
-            </div>
+            </a>
           </div>
         </div>
       </div>
