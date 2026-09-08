@@ -1,6 +1,6 @@
--- Migration 001: Expand offers table for complete OnJob.io data
--- Date: 2026-09-08
--- Purpose: Store full job information from OnJob.io feed
+-- Migration 001: Expand offers table for complete job data
+-- Date: 2026-09-07
+-- Purpose: Store full job information from job sources
 
 -- Add new columns to offers table
 ALTER TABLE offers ADD COLUMN company TEXT;
@@ -31,6 +31,13 @@ ALTER TABLE offers ADD COLUMN date_posted TIMESTAMP;
 ALTER TABLE offers ADD COLUMN valid_through TIMESTAMP;
 
 ALTER TABLE offers ADD COLUMN source_raw TEXT; -- JSON-LD or raw source data
+
+-- Add structured job detail sections
+ALTER TABLE offers ADD COLUMN responsibilities TEXT; -- Job responsibilities / duties
+ALTER TABLE offers ADD COLUMN qualifications TEXT; -- Required qualifications
+ALTER TABLE offers ADD COLUMN preferred_qualifications TEXT; -- Preferred qualifications
+ALTER TABLE offers ADD COLUMN benefits TEXT; -- Job benefits (JSON array or text)
+ALTER TABLE offers ADD COLUMN education TEXT; -- Education requirements
 
 -- Create index on external_id for deduplication
 CREATE INDEX IF NOT EXISTS idx_offers_external_id ON offers(external_id, source_id);

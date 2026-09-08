@@ -4,6 +4,7 @@ node_modules/
 .env
 .env.local
 .secrets/
+.secret/
 .DS_Store
 dist/
 build/

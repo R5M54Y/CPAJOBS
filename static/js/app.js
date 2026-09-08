@@ -28,7 +28,7 @@ class CPAJobsApp {
     const hash = window.location.hash.slice(1) || 'landing';
     
     // Parse route name and query params from hash
-    // e.g., 'offer-detail?id=onjob-manual-001' → route='offer-detail', params={id: 'onjob-manual-001'}
+    // e.g., 'offer-detail?id=ashby-abc123' → route='offer-detail', params={id: 'ashby-abc123'}
     const [routeName, queryString] = hash.split('?');
     this.state.currentView = routeName;
     
@@ -274,29 +274,47 @@ class CPAJobsApp {
   }
 
   renderLanding() {
+    if (this.state.loading) {
+      return `
+        <section class="hero">
+          <h1>Find Your Next CPA Opportunity</h1>
+          <p>Discover high-paying CPA programs and start earning today</p>
+          <p>Loading opportunities...</p>
+        </section>
+      `;
+    }
+
+    if (this.state.error) {
+      return `
+        <section class="hero">
+          <h1>Find Your Next CPA Opportunity</h1>
+          <p class="error">Error: ${this.state.error}</p>
+        </section>
+      `;
+    }
+
+    if (!this.state.offers || this.state.offers.length === 0) {
+      return `
+        <section class="hero">
+          <h1>Find Your Next CPA Opportunity</h1>
+          <p>Discover high-paying CPA programs and start earning today</p>
+        </section>
+        <section class="offer-list">
+          <h2>Opportunities</h2>
+          <p class="no-results">No opportunities available at this time. Please check back soon.</p>
+        </section>
+      `;
+    }
+
     return `
       <section class="hero">
         <h1>Find Your Next CPA Opportunity</h1>
         <p>Discover high-paying CPA programs and start earning today</p>
-        ${this.state.loading ? '<p>Loading...</p>' : ''}
-        ${this.state.error ? `<p class="error">${this.state.error}</p>` : ''}
       </section>
 
       <section class="offer-list">
-        <h2>Featured Opportunities</h2>
+        <h2>Available Opportunities</h2>
         ${this.state.offers.map(offer => this.renderOfferCard(offer)).join('')}
-      </section>
-
-      <section class="offer-list">
-        <h2>Browse Categories</h2>
-        <div class="category-grid">
-          ${this.state.categories.map(cat => `
-            <div class="category-card" onclick="app.navigate('categories')">
-              <h3>${cat.name}</h3>
-              <p>${cat.description}</p>
-            </div>
-          `).join('')}
-        </div>
       </section>
     `;
   }
@@ -379,6 +397,38 @@ class CPAJobsApp {
             <h3>Skills</h3>
             <div class="skills-list">
               ${o.skills.map(skill => `<span class="skill-badge">${skill}</span>`).join('')}
+            </div>
+          </div>` : ''}
+
+          ${o.responsibilities ? `
+          <div class="job-details">
+            <h3>Responsibilities</h3>
+            <div class="detail-content">${o.responsibilities}</div>
+          </div>` : ''}
+
+          ${o.qualifications ? `
+          <div class="job-details">
+            <h3>Requirements</h3>
+            <div class="detail-content">${o.qualifications}</div>
+          </div>` : ''}
+
+          ${o.preferred_qualifications ? `
+          <div class="job-details">
+            <h3>Preferred Qualifications</h3>
+            <div class="detail-content">${o.preferred_qualifications}</div>
+          </div>` : ''}
+
+          ${o.education ? `
+          <div class="job-details">
+            <h3>Education</h3>
+            <div class="detail-content">${o.education}</div>
+          </div>` : ''}
+
+          ${o.benefits ? `
+          <div class="benefits-section">
+            <h3>Benefits</h3>
+            <div class="benefits-content">
+              ${Array.isArray(o.benefits) ? o.benefits.map(b => `<div class="benefit-item">• ${b}</div>`).join('') : `<div class="benefit-item">${o.benefits}</div>`}
             </div>
           </div>` : ''}
 

@@ -8,7 +8,7 @@ kv_namespaces = [
 
 # D1 database configuration
 d1_databases = [
-  { binding = "DB", database_name = "cpajobs-db", database_id = "e05af5a8-824b-493b-a9b0-1ce06ce8566e" }
+  { binding = "DB", database_name = "cpajobs-db", database_id = "e05af5a8-824b-493b-a9b0-1ce06ce8566e", migrations_dir = "src/db/migrations" }
 ]
 
 # Cloudflare Workers routes matching the blueprint exactly
@@ -25,7 +25,12 @@ d1_databases = [
 # Compatibility date for Cloudflare Workers
 compatibility_date = "2026-09-03"
 
-# Scheduled cron job for OnJob.io feed import
-# Runs daily at 2 AM UTC
+# Scheduled cron job for Ashby job import
+# Next run: 2026-09-08T17:19 UTC (final test with complete schema)
 [triggers]
-crons = ["0 2 * * *"]
+crons = ["19 17 * * *"]
+
+# Ashby Job Board Configuration (set via 'wrangler secret' or environment)
+# ASHBY_JOB_BOARD_NAME - Your organization's Ashby job board identifier
+# Example: "company-name" for https://jobs.ashbyhq.com/company-name
+# No API key required - Ashby Public Job Postings API is public
