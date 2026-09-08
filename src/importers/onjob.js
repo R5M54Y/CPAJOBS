@@ -108,60 +108,115 @@ async function processJob(env, job) {
     throw new Error('Missing required fields: url or title');
   }
 
-  // Use OnJob URL as unique identifier for deduplication
+  // Use OnJob external ID for stable deduplication
+  const externalId = job.id;
   const offerUrl = job.url;
 
-  // Check if this OnJob offer already exists
+  // Check if this OnJob offer already exists by external_id or URL
   const existing = await env.DB.prepare(
-    'SELECT id, status FROM offers WHERE url = ? AND source_id = ?'
-  ).bind(offerUrl, ONJOB_SOURCE_ID).first();
+    'SELECT id, status FROM offers WHERE (external_id = ? OR url = ?) AND source_id = ?'
+  ).bind(externalId, offerUrl, ONJOB_SOURCE_ID).first();
 
-  // Extract and normalize fields from OnJob feed
+  // Extract and normalize ALL available fields from OnJob feed
   const title = job.title.trim().substring(0, 255);
   const description = job.description || job.summary || '';
+  const descriptionHtml = job.descriptionHtml || description;
   const category = extractCategory(job);
   const location = job.location || job.city || null;
+  
+  // Company information
+  const company = job.company || null;
+  const companyDomain = job.companyDomain || null;
+  const companyLogo = job.jsonLd?.hiringOrganization?.logo || null;
+  
+  // Location details
+  const locationCity = job.city || null;
+  const locationState = job.state || null;
+  const locationCountry = job.country || null;
+  const locationCountryCode = job.countryCode || null;
+  const remote = job.remote || false;
+  
+  // Employment details
+  const employmentType = job.employmentType || null;
+  const experience = job.experience || null;
+  const skills = job.skills ? JSON.stringify(job.skills) : null;
+  
+  // Salary information
+  const salaryMin = job.salaryMin ? parseFloat(job.salaryMin) : null;
+  const salaryMax = job.salaryMax ? parseFloat(job.salaryMax) : null;
+  const salaryCurrency = job.currency || null;
+  const salaryPeriod = 'month'; // OnJob salaries are monthly
+  const salaryDisplay = job.salary || null;
+  
+  // Application and dates
+  const applyUrl = job.applyUrl || offerUrl;
+  const datePosted = job.datePosted || null;
+  const validThrough = job.jsonLd?.validThrough || null;
+  
+  // Preserve raw source data for debugging
+  const sourceRaw = job.jsonLd ? JSON.stringify(job.jsonLd) : null;
   
   // OnJob jobs are NOT CPA offers - set payout to 0
   const payout = 0.0;
   const payoutType = 'none';
 
   if (existing) {
-    // Update existing offer if status needs changing or content changed
-    if (existing.status !== 'active') {
-      await env.DB.prepare(`
-        UPDATE offers 
-        SET status = 'active', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).bind(existing.id).run();
-      return 'updated';
-    }
-    return 'skipped';
+    // Update existing offer with latest data
+    await env.DB.prepare(`
+      UPDATE offers 
+      SET 
+        title = ?, description = ?, description_html = ?,
+        company = ?, company_domain = ?, company_logo = ?,
+        location = ?, location_city = ?, location_state = ?, 
+        location_country = ?, location_country_code = ?, remote = ?,
+        employment_type = ?, experience = ?, skills = ?,
+        salary_min = ?, salary_max = ?, salary_currency = ?, 
+        salary_period = ?, salary_display = ?,
+        apply_url = ?, date_posted = ?, valid_through = ?,
+        source_raw = ?, status = 'active', updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(
+      title, description, descriptionHtml,
+      company, companyDomain, companyLogo,
+      location, locationCity, locationState, 
+      locationCountry, locationCountryCode, remote,
+      employmentType, experience, skills,
+      salaryMin, salaryMax, salaryCurrency,
+      salaryPeriod, salaryDisplay,
+      applyUrl, datePosted, validThrough,
+      sourceRaw, existing.id
+    ).run();
+    return 'updated';
   }
 
   // Ensure category exists
   const categoryId = await ensureCategory(env, category);
 
-  // Generate unique offer ID
-  const offerId = `onjob-${Date.now()}-${randomString(8)}`;
+  // Generate unique offer ID with external_id for tracking
+  const offerId = `onjob-${externalId.split('-')[0]}`;
 
-  // Insert new offer
+  // Insert new offer with complete data
   await env.DB.prepare(`
     INSERT INTO offers (
-      id, title, description, url, payout, payout_type,
-      category_id, source_id, location, status, 
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      id, external_id, title, description, description_html, 
+      url, apply_url, payout, payout_type,
+      company, company_domain, company_logo,
+      category_id, source_id, 
+      location, location_city, location_state, location_country, location_country_code, remote,
+      employment_type, experience, skills,
+      salary_min, salary_max, salary_currency, salary_period, salary_display,
+      date_posted, valid_through, source_raw,
+      status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).bind(
-    offerId,
-    title,
-    description,
-    offerUrl,
-    payout,
-    payoutType,
-    categoryId,
-    ONJOB_SOURCE_ID,
-    location
+    offerId, externalId, title, description, descriptionHtml,
+    offerUrl, applyUrl, payout, payoutType,
+    company, companyDomain, companyLogo,
+    categoryId, ONJOB_SOURCE_ID,
+    location, locationCity, locationState, locationCountry, locationCountryCode, remote,
+    employmentType, experience, skills,
+    salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryDisplay,
+    datePosted, validThrough, sourceRaw
   ).run();
 
   return 'imported';

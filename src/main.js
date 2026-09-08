@@ -117,9 +117,21 @@ const offers = async (req, env) => {
 const getOffer = async (offerId, env) => {
   try {
     const result = await env.DB.prepare(`
-      SELECT o.*, c.id as category_id, c.name, c.slug
+      SELECT 
+        o.id, o.external_id, o.title, o.description, o.description_html,
+        o.url, o.apply_url, o.payout, o.payout_type,
+        o.company, o.company_domain, o.company_logo,
+        o.location, o.location_city, o.location_state, o.location_country, o.location_country_code, o.remote,
+        o.employment_type, o.experience, o.skills,
+        o.salary_min, o.salary_max, o.salary_currency, o.salary_period, o.salary_display,
+        o.requirements, o.status, o.expires_at, o.date_posted, o.valid_through,
+        o.click_count, o.conversion_count, o.revenue,
+        o.created_at, o.updated_at,
+        c.id as category_id, c.name as category_name, c.slug as category_slug,
+        s.id as source_id, s.name as source_name
       FROM offers o
       LEFT JOIN categories c ON o.category_id = c.id
+      LEFT JOIN offer_sources s ON o.source_id = s.id
       WHERE o.id = ?
     `).bind(offerId).first();
 
@@ -130,9 +142,57 @@ const getOffer = async (offerId, env) => {
       });
     }
 
+    // Parse skills JSON if present
+    const skills = result.skills ? JSON.parse(result.skills) : [];
+
     const offer = {
-      ...result,
-      category: { id: result.category_id, name: result.name, slug: result.slug }
+      id: result.id,
+      external_id: result.external_id,
+      title: result.title,
+      description: result.description,
+      description_html: result.description_html,
+      url: result.url,
+      apply_url: result.apply_url,
+      payout: result.payout,
+      payout_type: result.payout_type,
+      company: result.company,
+      company_domain: result.company_domain,
+      company_logo: result.company_logo,
+      location: result.location,
+      location_city: result.location_city,
+      location_state: result.location_state,
+      location_country: result.location_country,
+      location_country_code: result.location_country_code,
+      remote: Boolean(result.remote),
+      employment_type: result.employment_type,
+      experience: result.experience,
+      skills: skills,
+      salary: {
+        min: result.salary_min,
+        max: result.salary_max,
+        currency: result.salary_currency,
+        period: result.salary_period,
+        display: result.salary_display
+      },
+      requirements: result.requirements,
+      status: result.status,
+      expires_at: result.expires_at,
+      date_posted: result.date_posted,
+      valid_through: result.valid_through,
+      click_count: result.click_count,
+      conversion_count: result.conversion_count,
+      revenue: result.revenue,
+      created_at: result.created_at,
+      updated_at: result.updated_at,
+      category: {
+        id: result.category_id,
+        name: result.category_name,
+        slug: result.category_slug
+      },
+      source: {
+        id: result.source_id,
+        name: result.source_name
+      }
     };
 
     return new Response(JSON.stringify(offer), {
