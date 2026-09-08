@@ -12,7 +12,7 @@ class CPAJobsApp {
       selectedOffer: null,
       trackingData: null
     };
-    this.baseUrl = '/';
+    this.baseUrl = '';
     this.init();
   }
 
