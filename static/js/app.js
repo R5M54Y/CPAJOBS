@@ -10,7 +10,8 @@ class CPAJobsApp {
       loading: false,
       error: null,
       selectedOffer: null,
-      trackingData: null
+      trackingData: null,
+      routeParams: {}
     };
     this.baseUrl = '';
     this.init();
@@ -25,9 +26,22 @@ class CPAJobsApp {
 
   async handleRoute() {
     const hash = window.location.hash.slice(1) || 'landing';
-    this.state.currentView = hash;
+    
+    // Parse route name and query params from hash
+    // e.g., 'offer-detail?id=onjob-manual-001' → route='offer-detail', params={id: 'onjob-manual-001'}
+    const [routeName, queryString] = hash.split('?');
+    this.state.currentView = routeName;
+    
+    // Store query params in state for route handlers to use
+    this.state.routeParams = {};
+    if (queryString) {
+      const params = new URLSearchParams(queryString);
+      params.forEach((value, key) => {
+        this.state.routeParams[key] = value;
+      });
+    }
 
-    switch (hash) {
+    switch (routeName) {
       case 'landing':
         await this.loadLanding();
         break;
@@ -35,7 +49,7 @@ class CPAJobsApp {
         await this.loadCategories();
         break;
       case 'offer-detail':
-        this.loadOfferDetail();
+        await this.loadOfferDetail();
         break;
       case 'admin':
         this.loadAdmin();
@@ -100,9 +114,8 @@ class CPAJobsApp {
     }
   }
 
-  loadOfferDetail() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const offerId = urlParams.get('id');
+  async loadOfferDetail() {
+    const offerId = this.state.routeParams?.id;
 
     if (!offerId) {
       this.state.error = 'Offer ID not found';
@@ -114,23 +127,20 @@ class CPAJobsApp {
     this.state.error = null;
 
     // Load specific offer
-    this.apiCall(`/offers/${offerId}`)
-      .then(response => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error('Offer not found');
-        }
-      })
-      .then(data => {
+    try {
+      const response = await this.apiCall(`/offers/${offerId}`);
+      if (response.ok) {
+        const data = await response.json();
         this.state.selectedOffer = data;
-        this.setLoading(false);
-      })
-      .catch(error => {
-        this.state.error = 'Failed to load offer details';
-        console.error('Offer detail error:', error);
-        this.setLoading(false);
-      });
+      } else {
+        throw new Error('Offer not found');
+      }
+    } catch (error) {
+      this.state.error = 'Failed to load offer details';
+      console.error('Offer detail error:', error);
+    } finally {
+      this.setLoading(false);
+    }
   }
 
   loadAdmin() {
