@@ -188,11 +188,11 @@ class CPAJobsApp {
       // Old signature: apiCall(endpoint, method, body)
       method = params;
       queryParams = null;
-    } else if (typeof params === 'object' && params !== null && body === null) {
+    } else if (params !== null && typeof params === 'object' && body === null) {
       // New signature: apiCall(endpoint, {params})
       queryParams = params;
       method = 'GET';
-    } else if (typeof params === 'object' && typeof body === 'object') {
+    } else if (params !== null && body !== null) {
       // New signature: apiCall(endpoint, params, body)
       queryParams = params;
       method = 'POST';
