@@ -1,4 +1,4 @@
-app.js - CPA JOBS Frontend MVP
+// app.js - CPA JOBS Frontend MVP
 
 class CPAJobsApp {
   constructor() {
@@ -284,7 +284,7 @@ class CPAJobsApp {
               <h3>${cat.name}</h3>
               <p>${cat.description}</p>
             </div>
-          </button>
+          `).join('')}
         </div>
       </section>
     `;
@@ -306,7 +306,7 @@ class CPAJobsApp {
             <button class="category-filter ${this.state.selectedCategory === cat.slug ? 'active' : ''}" onclick="app.setSelectedCategory('${cat.slug}')">
               ${cat.name}
             </button>
-          </button>
+          `).join('')}
         </div>
 
         <div class="offer-grid">
