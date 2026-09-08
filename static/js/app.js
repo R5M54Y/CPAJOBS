@@ -19,8 +19,8 @@ class CPAJobsApp {
   init() {
     // Check URL hash for navigation
     window.addEventListener('hashchange', () => this.handleRoute());
-    window.addEventListener('DOMContentLoaded', () => this.handleRoute());
-    this.render();
+    // Initial route on load
+    this.handleRoute();
   }
 
   async handleRoute() {

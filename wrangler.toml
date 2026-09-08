@@ -8,7 +8,7 @@ kv_namespaces = [
 
 # D1 database configuration
 d1_databases = [
-  { binding = "DB", database_name = "cpajobs-db" }
+  { binding = "DB", database_name = "cpajobs-db", database_id = "e05af5a8-824b-493b-a9b0-1ce06ce8566e" }
 ]
 
 # Cloudflare Workers routes matching the blueprint exactly
