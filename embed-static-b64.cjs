@@ -17,9 +17,19 @@ const STYLE_CSS_B64 = Buffer.from(styleCss).toString('base64');
 // Read current main.js
 const mainJs = fs.readFileSync(path.join(baseDir, 'src/main.js'), 'utf8');
 
-// Find insertion point (after comment block, before health endpoint)
-const insertMarker = '\n// Health check endpoint - checks infrastructure status';
-const insertIndex = mainJs.indexOf(insertMarker);
+// Remove any existing STATIC_FILES block
+const staticFilesStart = mainJs.indexOf('// Static file contents embedded as base64');
+const staticFilesEnd = mainJs.indexOf('\n// Health check endpoint');
+
+let cleanedMainJs = mainJs;
+if (staticFilesStart !== -1 && staticFilesEnd !== -1) {
+  // Remove existing block
+  cleanedMainJs = mainJs.slice(0, staticFilesStart) + mainJs.slice(staticFilesEnd);
+}
+
+// Find insertion point (after imports, before health endpoint)
+const insertMarker = '\n// Health check endpoint';
+const insertIndex = cleanedMainJs.indexOf(insertMarker);
 
 if (insertIndex === -1) {
   console.error('Could not find insertion point');
@@ -27,8 +37,7 @@ if (insertIndex === -1) {
 }
 
 // Build static constants with base64 encoding and decode helper
-const staticConstants = `
-// Static file contents embedded as base64 for Cloudflare Workers deployment
+const staticConstants = `// Static file contents embedded as base64 for Cloudflare Workers deployment
 const STATIC_FILES = {
   'index.html': Buffer.from('${INDEX_HTML_B64}', 'base64').toString('utf8'),
   'js/app.js': Buffer.from('${APP_JS_B64}', 'base64').toString('utf8'),
@@ -38,7 +47,7 @@ const STATIC_FILES = {
 `;
 
 // Insert constants
-const newMainJs = mainJs.slice(0, insertIndex) + staticConstants + mainJs.slice(insertIndex);
+const newMainJs = cleanedMainJs.slice(0, insertIndex) + staticConstants + cleanedMainJs.slice(insertIndex);
 
 // Write back
 fs.writeFileSync(path.join(baseDir, 'src/main.js'), newMainJs, 'utf8');
