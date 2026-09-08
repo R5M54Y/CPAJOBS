@@ -24,3 +24,8 @@ d1_databases = [
 
 # Compatibility date for Cloudflare Workers
 compatibility_date = "2026-09-03"
+
+# Scheduled cron job for OnJob.io feed import
+# Runs daily at 2 AM UTC
+[triggers]
+crons = ["0 2 * * *"]

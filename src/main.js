@@ -3,6 +3,8 @@
    All handlers expect D1 and KV bindings injected by Cloudflare
 */
 
+import { importOnJobFeed } from './importers/onjob.js';
+
 // Static file contents embedded as base64 for Cloudflare Workers deployment
 const STATIC_FILES = {
   'index.html': Buffer.from('PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CiAgPG1ldGEgY2hhcnNldD0iVVRGLTgiPgogIDxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MS4wIj4KICA8dGl0bGU+Q1BBIEpPQlMgLSBGaW5kIFlvdXIgTmV4dCBDUEEgT3Bwb3J0dW5pdHk8L3RpdGxlPgogIDxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iY3NzL3N0eWxlLmNzcyI+CiAgPGJhc2UgaHJlZj0iLyI+CjwvaGVhZD4KPGJvZHk+CiAgPGhlYWRlcj4KICAgIDxuYXYgY2xhc3M9Im5hdiI+CiAgICAgIDxhIGhyZWY9Ii8iIGNsYXNzPSJsb2dvIj5DUEEgSk9CUzwvYT4KICAgICAgPGRpdiBjbGFzcz0ibmF2LWxpbmtzIj4KICAgICAgICA8YSBocmVmPSIvIj5Ib21lPC9hPgogICAgICAgIDxhIGhyZWY9Ii9jYXRlZ29yaWVzIj5DYXRlZ29yaWVzPC9hPgogICAgICAgIDxhIGhyZWY9Ii9hZG1pbiI+QWRtaW48L2E+CiAgICAgIDwvZGl2PgogICAgPC9uYXY+CiAgPC9oZWFkZXI+CgogIDxtYWluIGlkPSJhcHAiPgogICAgPCEtLSBDb250ZW50IHdpbGwgYmUgbG9hZGVkIGhlcmUgLS0+CiAgPC9tYWluPgoKICA8Zm9vdGVyPgogICAgPHA+JmNvcHk7IDIwMjQgQ1BBIEpPQlMuIFlvdXIgZ2F0ZXdheSB0byBDUEEgb3Bwb3J0dW5pdGllcy48L3A+CiAgPC9mb290ZXI+CgogIDxzY3JpcHQgc3JjPSJqcy9hcHAuanMiPjwvc2NyaXB0Pgo8L2JvZHk+CjwvaHRtbD4=', 'base64').toString('utf8'),
@@ -951,5 +953,23 @@ export default {
       status: 404,
       headers: { 'Content-Type': 'application/json' }
     });
+  },
+
+  // Cloudflare Workers scheduled event handler for cron jobs
+  async scheduled(event, env, ctx) {
+    try {
+      // Run OnJob.io feed import
+      const stats = await importOnJobFeed(env);
+
+      console.log('OnJob import completed:', JSON.stringify(stats));
+
+      // If there were critical errors, throw to trigger retry
+      if (stats.errors.length > 0 && stats.imported === 0 && stats.updated === 0) {
+        throw new Error(`OnJob import failed: ${stats.errors.join('; ')}`);
+      }
+    } catch (err) {
+      console.error('Scheduled OnJob import failed:', err);
+      throw err; // Re-throw to trigger Cloudflare cron retry
+    }
   }
 };
