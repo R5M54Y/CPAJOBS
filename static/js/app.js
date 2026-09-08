@@ -231,6 +231,10 @@ class CPAJobsApp {
     window.location.hash = path;
   }
 
+  attachEventListeners() {
+    // Placeholder for event listeners - events handled via inline onclick in templates
+  }
+
   render() {
     const app = document.getElementById('app');
     if (!app) return;
