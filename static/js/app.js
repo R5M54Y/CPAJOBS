@@ -944,22 +944,32 @@ class CPAJobsApp {
   renderOfferCard(offer) {
     const permalink = this.generateJobPermalink(offer);
     const location = offer.location || [offer.location_city, offer.location_state, offer.location_country].filter(Boolean).join(', ') || 'Location not specified';
-    const hasDescription = offer.description && offer.description.trim().length > 0;
+    const salary = offer.salary_min || offer.salary_max ? `$${offer.salary_min || offer.salary_max}${offer.salary_period ? '/' + offer.salary_period : ''}` : null;
+    const applyUrl = offer.apply_url;
     
     return `
-      <div class="offer-card">
-        <a href="${permalink}" class="offer-card-link" onclick="event.preventDefault(); app.navigate('${permalink}')">
-          <h3>${offer.title}</h3>
-          <div class="offer-meta">
-            <span class="category">${offer.category?.name || offer.category_id?.replace('cat-', '').toUpperCase() || 'General'}</span>
-            ${offer.employment_type ? `<span style="display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; background: #f0f0f0; font-size: 0.8rem;">${offer.employment_type}</span>` : ''}
-          </div>
-          ${hasDescription ? `<p>${offer.description.substring(0, 120)}...</p>` : ''}
-          <div class="offer-footer">
-            <span style="font-size: 0.8rem; color: #666;">${location}</span>
-            ${offer.remote ? '<span style="font-size: 0.8rem; color: #059669;">✓ Remote</span>' : ''}
-          </div>
-        </a>
+      <div class="job-card">
+        <div class="job-card-header">
+          <a href="${permalink}" class="job-title" onclick="event.preventDefault(); app.navigate('${permalink}')">${offer.title}</a>
+        </div>
+        
+        <div class="job-meta">
+          <div class="job-meta-item">📍 ${location}</div>
+          ${offer.employment_type ? `<div class="job-meta-item">📋 ${offer.employment_type}</div>` : ''}
+          ${offer.remote ? `<div class="job-meta-item">🌍 Remote</div>` : ''}
+        </div>
+        
+        <div class="job-badges">
+          ${offer.category ? `<span class="job-badge">${offer.category.name || 'Job'}</span>` : ''}
+          ${offer.remote ? `<span class="job-badge">Remote</span>` : ''}
+        </div>
+        
+        ${offer.description ? `<p class="job-description">${offer.description.substring(0, 100)}${offer.description.length > 100 ? '...' : ''}</p>` : ''}
+        
+        <div class="job-footer">
+          ${salary ? `<span class="job-salary">${salary}</span>` : '<span></span>'}
+          ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">Apply Now</a>` : '<button class="apply-btn" disabled>Apply</button>'}
+        </div>
       </div>
     `;
   }
