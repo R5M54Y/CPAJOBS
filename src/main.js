@@ -777,7 +777,430 @@ footer p {
   }
 }
 
-/* === Legacy Support (Job Detail, Categories Pages) === */
+/* === JOB DETAIL PAGE === */
+
+.job-detail-page {
+  background: var(--neutral-50);
+  min-height: 100vh;
+  padding: var(--space-12) var(--space-6);
+}
+
+.job-detail-container {
+  max-width: var(--container-xl);
+  margin: 0 auto;
+}
+
+.job-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+}
+
+.job-breadcrumb a {
+  color: var(--brand-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.job-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.job-breadcrumb span {
+  color: var(--neutral-400);
+}
+
+/* Job Header */
+
+.job-header {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--space-10);
+  margin-bottom: var(--space-12);
+  box-shadow: var(--shadow-sm);
+}
+
+.job-header-main {
+  margin-bottom: var(--space-6);
+}
+
+.job-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.job-title {
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.job-company-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.job-company {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--brand-primary);
+}
+
+.job-location {
+  font-size: var(--text-base);
+  color: var(--neutral-600);
+}
+
+.job-header-meta {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--neutral-200);
+}
+
+.job-meta-badge {
+  display: inline-block;
+  padding: var(--space-2) var(--space-3);
+  background: var(--neutral-100);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--neutral-700);
+}
+
+.job-meta-badge.remote {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.job-meta-badge.category {
+  background: var(--brand-primary-light);
+  color: var(--brand-primary-dark);
+}
+
+/* Content Grid */
+
+.job-content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-10);
+}
+
+.job-main-content {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--space-10);
+  box-shadow: var(--shadow-sm);
+}
+
+.job-section {
+  margin-bottom: var(--space-10);
+  padding-bottom: var(--space-10);
+  border-bottom: 1px solid var(--neutral-200);
+}
+
+.job-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.job-section h2 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--brand-primary);
+  display: inline-block;
+}
+
+.job-description-text {
+  font-size: var(--text-base);
+  line-height: 1.8;
+  color: var(--neutral-700);
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.job-description-text ul,
+.job-description-text ol {
+  margin-left: var(--space-6);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.job-description-text li {
+  margin-bottom: var(--space-3);
+}
+
+.job-description-text p {
+  margin-bottom: var(--space-4);
+}
+
+/* Sidebar */
+
+.job-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  height: fit-content;
+  position: sticky;
+  top: var(--space-8);
+}
+
+.sidebar-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-card-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin: 0 0 var(--space-4) 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--brand-primary);
+}
+
+.sidebar-info-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sidebar-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sidebar-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--neutral-500);
+}
+
+.sidebar-value {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--neutral-900);
+}
+
+/* Apply Card */
+
+.apply-card {
+  background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+  color: white;
+}
+
+.apply-card .sidebar-card-title {
+  display: none;
+}
+
+.apply-button {
+  display: block;
+  width: 100%;
+  padding: var(--space-4) var(--space-6);
+  background: white;
+  color: var(--brand-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.2s;
+  margin-bottom: var(--space-3);
+}
+
+.apply-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.apply-note {
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin: 0;
+}
+
+/* Share Buttons */
+
+.share-buttons {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.share-btn {
+  flex: 1;
+  min-width: 80px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--neutral-100);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--neutral-700);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.share-btn:hover {
+  background: var(--brand-primary-light);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+/* Not Found State */
+
+.job-not-found {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--space-16);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.job-not-found h1 {
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin-bottom: var(--space-4);
+}
+
+.job-not-found p {
+  font-size: var(--text-lg);
+  color: var(--neutral-600);
+  margin-bottom: var(--space-8);
+}
+
+.back-link {
+  display: inline-block;
+  padding: var(--space-3) var(--space-6);
+  background: var(--brand-primary);
+  color: white;
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.back-link:hover {
+  background: var(--brand-primary-dark);
+  transform: translateY(-2px);
+}
+
+/* Responsive Job Detail */
+
+@media (max-width: 1024px) {
+  .job-content-grid {
+    grid-template-columns: 1.5fr 1fr;
+    gap: var(--space-8);
+  }
+  
+  .job-title {
+    font-size: var(--text-3xl);
+  }
+}
+
+@media (max-width: 768px) {
+  .job-detail-page {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .job-detail-container {
+    max-width: 100%;
+  }
+
+  .job-content-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .job-sidebar {
+    position: static;
+    top: auto;
+  }
+
+  .job-header {
+    padding: var(--space-6);
+  }
+
+  .job-title {
+    font-size: var(--text-2xl);
+  }
+
+  .job-main-content {
+    padding: var(--space-6);
+  }
+
+  .job-header-meta {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .sidebar-card {
+    padding: var(--space-5);
+  }
+
+  .apply-button {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .job-detail-page {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .job-header {
+    padding: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .job-title {
+    font-size: var(--text-xl);
+  }
+
+  .job-company {
+    font-size: var(--text-base);
+  }
+
+  .job-section h2 {
+    font-size: var(--text-lg);
+  }
+
+  .sidebar-card {
+    padding: var(--space-4);
+  }
+
+  .share-buttons {
+    gap: var(--space-1);
+  }
+
+  .share-btn {
+    min-width: 70px;
+    font-size: var(--text-xs);
+    padding: var(--space-2) var(--space-2);
+  }
+} */
 
 .offer-detail,
 .offer-detail-card,
@@ -1745,134 +2168,162 @@ class CPAJobsApp {
   renderOfferDetail() {
     if (!this.state.selectedOffer) {
       return \`
-        <div class="offer-detail">
-          <a href="/jobs/" class="back-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">← Back to Jobs</a>
-          <div class="offer-detail-card">
-            <div class="error-message">
-              <p style="margin: 0;">⚠️ Job not found or unavailable</p>
+        <div class="job-detail-page">
+          <div class="job-detail-container">
+            <div class="job-not-found">
+              <h1>Job Not Found</h1>
+              <p>The job you're looking for is no longer available.</p>
+              <a href="/" class="back-link" onclick="event.preventDefault(); app.navigate('/')">← Back to Jobs</a>
             </div>
-            <a href="/jobs/" class="apply-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">Browse All Jobs</a>
           </div>
         </div>
       \`;
     }
 
-    const o = this.state.selectedOffer;
-    const hasCompany = o.company || o.company_domain;
-    const hasLocation = o.location || o.location_city || o.location_country;
-    const hasSalary = o.salary_min || o.salary_max || o.salary_display;
-    const applyUrl = o.apply_url || o.url;
+    const job = this.state.selectedOffer;
+    const applyUrl = job.apply_url;
+    const location = job.location || [job.location_city, job.location_state, job.location_country].filter(Boolean).join(', ');
+    const hasDescription = job.description && job.description.trim().length > 0;
+    const hasResponsibilities = job.responsibilities && job.responsibilities.trim().length > 0;
+    const hasRequirements = job.qualifications || job.requirements;
+    const hasBenefits = job.benefits && (Array.isArray(job.benefits) ? job.benefits.length > 0 : true);
     
-    const location = o.location || [o.location_city, o.location_state, o.location_country].filter(Boolean).join(', ') || 'Not specified';
-
     return \`
-      <div class="offer-detail">
-        <a href="/jobs/" class="back-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">← Back to Jobs</a>
-        <div class="offer-detail-card">
-          <h1>\${o.title}</h1>
+      <div class="job-detail-page">
+        <div class="job-detail-container">
           
-          <div class="job-header-meta">
-            \${hasCompany ? \`
-            <div class="meta-item">
-              <strong>Company</strong>
-              <span>\${o.company}\${o.company_domain ? \` · \${o.company_domain}\` : ''}</span>
-            </div>\` : ''}
-            \${hasLocation ? \`
-            <div class="meta-item">
-              <strong>Location</strong>
-              <span>\${location}</span>
-            </div>\` : ''}
-            \${o.remote !== undefined && o.remote !== null ? \`
-            <div class="meta-item">
-              <strong>Work Mode</strong>
-              <span>\${o.remote ? '✓ Remote' : 'On-site'}</span>
-            </div>\` : ''}
-            \${o.employment_type ? \`
-            <div class="meta-item">
-              <strong>Employment Type</strong>
-              <span>\${o.employment_type}</span>
-            </div>\` : ''}
-            \${o.category_id ? \`
-            <div class="meta-item">
-              <strong>Category</strong>
-              <span>\${o.category_id.replace('cat-', '').charAt(0).toUpperCase() + o.category_id.replace('cat-', '').slice(1)}</span>
-            </div>\` : ''}
-            \${o.date_posted ? \`
-            <div class="meta-item">
-              <strong>Posted</strong>
-              <span>\${new Date(o.date_posted).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-            </div>\` : ''}
+          <!-- Breadcrumb -->
+          <div class="job-breadcrumb">
+            <a href="/" onclick="event.preventDefault(); app.navigate('/')">Jobs</a>
+            \${job.category ? \`<span>/</span><span>\${job.category.name}</span>\` : ''}
+            <span>/</span><span>\${job.title}</span>
           </div>
 
-          \${hasSalary ? \`
-          <div class="salary-section">
-            <h3>Compensation</h3>
-            <div class="salary-display">
-              \${o.salary_display || (o.salary_min || o.salary_max) ? \`\${o.salary_display || \`\${o.salary_currency || 'USD'} \${o.salary_min ? o.salary_min.toLocaleString() : ''}\${o.salary_min && o.salary_max ? ' - ' : ''}\${o.salary_max ? o.salary_max.toLocaleString() : ''} \${o.salary_period || 'per year'}\`}\` : 'Not specified'}
+          <!-- Job Header -->
+          <div class="job-header">
+            <div class="job-header-main">
+              <div class="job-header-content">
+                <h1 class="job-title">\${job.title}</h1>
+                <div class="job-company-info">
+                  <span class="job-company">\${job.company || 'Company'}</span>
+                  \${location ? \`<span class="job-location">📍 \${location}</span>\` : ''}
+                </div>
+              </div>
             </div>
-          </div>\` : ''}
-
-          \${applyUrl ? \`
-          <a href="\${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="app.handleOfferClick('\${o.id}')">Apply for this Position</a>
-          \` : \`
-          <button disabled class="apply-btn" style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>
-          \`}
-
-          \${o.description_html || o.description ? \`
-          <div class="description-section">
-            <h3>Job Description</h3>
-            <div class="description-content">
-              \${o.description_html ? o.description_html : \`<p>\${o.description}</p>\`}
+            
+            <div class="job-header-meta">
+              \${job.employment_type ? \`<span class="job-meta-badge">📋 \${job.employment_type}</span>\` : ''}
+              \${job.remote ? \`<span class="job-meta-badge remote">🌍 Remote</span>\` : ''}
+              \${job.category ? \`<span class="job-meta-badge category">\${job.category.name}</span>\` : ''}
             </div>
-          </div>\` : ''}
+          </div>
 
-          \${o.responsibilities ? \`
-          <div class="job-details">
-            <h3>Responsibilities</h3>
-            <div class="detail-content">\${o.responsibilities}</div>
-          </div>\` : ''}
+          <!-- Main Content Layout -->
+          <div class="job-content-grid">
+            
+            <!-- Main Content -->
+            <main class="job-main-content">
+              \${hasDescription ? \`
+              <section class="job-section">
+                <h2>Job Description</h2>
+                <div class="job-description-text">
+                  \${job.description}
+                </div>
+              </section>
+              \` : ''}
 
-          \${o.qualifications ? \`
-          <div class="job-details">
-            <h3>Requirements</h3>
-            <div class="detail-content">\${o.qualifications}</div>
-          </div>\` : ''}
+              \${hasResponsibilities ? \`
+              <section class="job-section">
+                <h2>Responsibilities</h2>
+                <div class="job-description-text">
+                  \${job.responsibilities}
+                </div>
+              </section>
+              \` : ''}
 
-          \${o.preferred_qualifications ? \`
-          <div class="job-details">
-            <h3>Preferred Qualifications</h3>
-            <div class="detail-content">\${o.preferred_qualifications}</div>
-          </div>\` : ''}
+              \${hasRequirements ? \`
+              <section class="job-section">
+                <h2>Requirements</h2>
+                <div class="job-description-text">
+                  \${job.qualifications || job.requirements}
+                </div>
+              </section>
+              \` : ''}
 
-          \${o.education ? \`
-          <div class="job-details">
-            <h3>Education</h3>
-            <div class="detail-content">\${o.education}</div>
-          </div>\` : ''}
+              \${hasBenefits ? \`
+              <section class="job-section">
+                <h2>Benefits</h2>
+                <div class="job-description-text">
+                  \${Array.isArray(job.benefits) ? '<ul>' + job.benefits.map(b => \`<li>\${b}</li>\`).join('') + '</ul>' : job.benefits}
+                </div>
+              </section>
+              \` : ''}
+            </main>
 
-          \${o.experience ? \`
-          <div class="job-details">
-            <h3>Experience Required</h3>
-            <div class="detail-content">\${o.experience}</div>
-          </div>\` : ''}
+            <!-- Sidebar -->
+            <aside class="job-sidebar">
+              
+              <!-- Quick Info Card -->
+              <div class="sidebar-card">
+                <h3 class="sidebar-card-title">Job Details</h3>
+                <div class="sidebar-info-group">
+                  \${job.employment_type ? \`
+                  <div class="sidebar-info-item">
+                    <span class="sidebar-label">Employment Type</span>
+                    <span class="sidebar-value">\${job.employment_type}</span>
+                  </div>
+                  \` : ''}
+                  
+                  \${location ? \`
+                  <div class="sidebar-info-item">
+                    <span class="sidebar-label">Location</span>
+                    <span class="sidebar-value">\${location}</span>
+                  </div>
+                  \` : ''}
+                  
+                  \${job.remote !== undefined ? \`
+                  <div class="sidebar-info-item">
+                    <span class="sidebar-label">Remote</span>
+                    <span class="sidebar-value">\${job.remote ? '✓ Yes' : 'On-site'}</span>
+                  </div>
+                  \` : ''}
+                  
+                  \${job.category ? \`
+                  <div class="sidebar-info-item">
+                    <span class="sidebar-label">Category</span>
+                    <span class="sidebar-value">\${job.category.name}</span>
+                  </div>
+                  \` : ''}
+                </div>
+              </div>
 
-          \${o.skills && o.skills.length > 0 ? \`
-          <div class="skills-section">
-            <h3>Required Skills</h3>
-            <div class="skills-list">
-              \${o.skills.map(skill => \`<span class="skill-badge">\${skill}</span>\`).join('')}
-            </div>
-          </div>\` : ''}
+              <!-- Apply Card -->
+              <div class="sidebar-card apply-card">
+                \${applyUrl ? \`
+                <a href="\${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-button" onclick="app.handleOfferClick('\${job.id}')">
+                  Apply for this Position
+                </a>
+                \` : \`
+                <button class="apply-button" disabled style="opacity: 0.5; cursor: not-allowed;">
+                  Application Link Not Available
+                </button>
+                \`}
+                <p class="apply-note">You will be redirected to the application page.</p>
+              </div>
 
-          \${o.benefits ? \`
-          <div class="job-details">
-            <h3>Benefits</h3>
-            <div class="detail-content">\${Array.isArray(o.benefits) ? o.benefits.map(b => \`<div>• \${b}</div>\`).join('') : o.benefits}</div>
-          </div>\` : ''}
+              <!-- Share Card -->
+              <div class="sidebar-card">
+                <h3 class="sidebar-card-title">Share</h3>
+                <div class="share-buttons">
+                  <button class="share-btn" title="Share on LinkedIn" onclick="window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.href), '_blank')">LinkedIn</button>
+                  <button class="share-btn" title="Share on Twitter" onclick="window.open('https://twitter.com/intent/tweet?url=' + encodeURIComponent(window.location.href), '_blank')">Twitter</button>
+                </div>
+              </div>
 
-          \${applyUrl ? \`
-          <a href="\${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="app.handleOfferClick('\${o.id}')">Apply for this Position</a>
-          \` : ''}
+            </aside>
+
+          </div>
+
         </div>
       </div>
     \`;
