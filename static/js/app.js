@@ -1,4 +1,4 @@
-// app.js - CPA JOBS Frontend MVP
+// app.js - USA JOBS Frontend MVP
 
 class CPAJobsApp {
   constructor() {
@@ -18,47 +18,125 @@ class CPAJobsApp {
   }
 
   init() {
-    // Check URL hash for navigation
+    // Path-based routing with popstate support
+    window.addEventListener('popstate', () => this.handleRoute());
+    // Legacy hash support for backwards compatibility
     window.addEventListener('hashchange', () => this.handleRoute());
     // Initial route on load
     this.handleRoute();
   }
 
   async handleRoute() {
-    const hash = window.location.hash.slice(1) || 'landing';
+    const pathname = window.location.pathname;
+    const hash = window.location.hash.slice(1);
     
-    // Parse route name and query params from hash
-    // e.g., 'offer-detail?id=ashby-abc123' → route='offer-detail', params={id: 'ashby-abc123'}
-    const [routeName, queryString] = hash.split('?');
-    this.state.currentView = routeName;
-    
-    // Store query params in state for route handlers to use
-    this.state.routeParams = {};
-    if (queryString) {
-      const params = new URLSearchParams(queryString);
-      params.forEach((value, key) => {
-        this.state.routeParams[key] = value;
-      });
-    }
-
-    switch (routeName) {
-      case 'landing':
-        await this.loadLanding();
-        break;
-      case 'categories':
-        await this.loadCategories();
-        break;
-      case 'offer-detail':
+    // Path-based routing takes priority
+    if (pathname.startsWith('/jobs/') && pathname.length > 6) {
+      const pathSegment = pathname.slice(6);
+      const jobId = this.extractJobIdFromPath(pathSegment);
+      
+      if (jobId) {
+        this.state.currentView = 'offer-detail';
+        this.state.routeParams = { id: jobId };
         await this.loadOfferDetail();
-        break;
-      case 'admin':
-        this.loadAdmin();
-        break;
-      default:
-        await this.loadLanding();
+        this.render();
+        return;
+      } else {
+        this.state.currentView = 'offer-detail';
+        this.state.routeParams = {};
+        this.state.error = 'Job not found';
+        this.state.selectedOffer = null;
+        this.render();
+        return;
+      }
     }
-
+    
+    if (pathname === '/jobs' || pathname === '/jobs/') {
+      this.state.currentView = 'landing';
+      this.state.routeParams = {};
+      await this.loadLanding();
+      this.render();
+      return;
+    }
+    
+    // Legacy hash routing support
+    if (hash) {
+      const [routeName, queryString] = hash.split('?');
+      this.state.routeParams = {};
+      
+      if (queryString) {
+        const params = new URLSearchParams(queryString);
+        params.forEach((value, key) => {
+          this.state.routeParams[key] = value;
+        });
+      }
+      
+      if (routeName === 'offer-detail' && this.state.routeParams.id) {
+        this.state.currentView = 'offer-detail';
+        await this.loadOfferDetail();
+        if (this.state.selectedOffer) {
+          const prettyUrl = this.generateJobPermalink(this.state.selectedOffer);
+          history.replaceState(null, '', prettyUrl);
+        }
+        this.render();
+        return;
+      }
+      
+      switch (routeName) {
+        case 'landing':
+          await this.loadLanding();
+          break;
+        case 'categories':
+          await this.loadCategories();
+          break;
+        case 'admin':
+          this.loadAdmin();
+          break;
+        default:
+          await this.loadLanding();
+      }
+      this.render();
+      return;
+    }
+    
+    this.state.currentView = 'landing';
+    this.state.routeParams = {};
+    await this.loadLanding();
     this.render();
+  }
+
+  extractJobIdFromPath(pathSegment) {
+    const ashbyMatch = pathSegment.match(/(ashby-[a-f0-9-]+)$/i);
+    if (ashbyMatch) {
+      return ashbyMatch[1];
+    }
+    
+    const parts = pathSegment.split('-');
+    if (parts.length >= 2) {
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const candidate = parts.slice(i).join('-');
+        if (candidate.includes('-') && candidate.length > 10) {
+          return candidate;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  generateJobPermalink(job) {
+    if (!job || !job.id) return '/';
+    const slug = this.normalizeSlug(job.title || 'job');
+    return `/jobs/${slug}-${job.id}`;
+  }
+
+  normalizeSlug(title) {
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   async loadLanding() {
@@ -66,14 +144,12 @@ class CPAJobsApp {
       this.setLoading(true);
       this.state.error = null;
 
-      // Load featured offers
       const response = await this.apiCall('/offers', { status: 'active', limit: 6 });
       if (response.ok) {
         const data = await response.json();
         this.state.offers = data.offers || [];
       }
 
-      // Load categories for navigation
       const categoriesResponse = await this.apiCall('/categories');
       if (categoriesResponse.ok) {
         const data = await categoriesResponse.json();
@@ -99,7 +175,6 @@ class CPAJobsApp {
         this.state.categories = data.categories || [];
       }
 
-      // Also load offers for category page
       const offersResponse = await this.apiCall('/offers', { status: 'active', limit: 20 });
       if (offersResponse.ok) {
         const data = await offersResponse.json();
@@ -126,7 +201,6 @@ class CPAJobsApp {
     this.setLoading(true);
     this.state.error = null;
 
-    // Load specific offer
     try {
       const response = await this.apiCall(`/offers/${offerId}`);
       if (response.ok) {
@@ -137,7 +211,7 @@ class CPAJobsApp {
       }
     } catch (error) {
       this.state.error = 'Failed to load offer details';
-      this.state.selectedOffer = null; // Clear stale state
+      this.state.selectedOffer = null;
       console.error('Offer detail error:', error);
     } finally {
       this.setLoading(false);
@@ -146,7 +220,6 @@ class CPAJobsApp {
   }
 
   loadAdmin() {
-    // Admin view uses existing backend endpoints
     this.state.currentView = 'admin';
     this.render();
   }
@@ -181,27 +254,22 @@ class CPAJobsApp {
   }
 
   async apiCall(endpoint, params = null, body = null) {
-    // Handle both old signature (method as string) and new signature (params as object)
     let method = 'GET';
     let queryParams = null;
 
     if (typeof params === 'string') {
-      // Old signature: apiCall(endpoint, method, body)
       method = params;
       queryParams = null;
     } else if (params !== null && typeof params === 'object' && body === null) {
-      // New signature: apiCall(endpoint, {params})
       queryParams = params;
       method = 'GET';
     } else if (params !== null && body !== null) {
-      // New signature: apiCall(endpoint, params, body)
       queryParams = params;
       method = 'POST';
     }
 
     let url = this.baseUrl + endpoint;
 
-    // Build query string if params provided
     if (queryParams && method === 'GET') {
       const searchParams = new URLSearchParams();
       Object.keys(queryParams).forEach(key => {
@@ -240,11 +308,16 @@ class CPAJobsApp {
   }
 
   navigate(path) {
-    window.location.hash = path;
+    if (path.startsWith('/')) {
+      history.pushState(null, '', path);
+      this.handleRoute();
+    } else {
+      window.location.hash = path;
+    }
   }
 
   attachEventListeners() {
-    // Placeholder for event listeners - events handled via inline onclick in templates
+    // Placeholder for event listeners
   }
 
   render() {
@@ -272,14 +345,222 @@ class CPAJobsApp {
 
     app.innerHTML = html;
     this.attachEventListeners();
+    
+    // Update SEO metadata after render
+    this.updateSeoMetadata();
+  }
+
+  updateSeoMetadata() {
+    const canonicalHostname = 'https://usajobs.workers.dev';
+    let title = 'USA Jobs';
+    let description = 'Find accounting and finance job opportunities. Browse high-paying CPA positions from top employers.';
+    let canonicalUrl = `${canonicalHostname}/`;
+    let ogTitle = 'USA Jobs | Accounting & Finance Opportunities';
+    let ogDescription = description;
+    let ogType = 'website';
+    let twitterTitle = ogTitle;
+    let twitterDescription = description;
+    let jobPostingJson = null;
+
+    if (this.state.currentView === 'offer-detail') {
+      if (this.state.selectedOffer) {
+        const job = this.state.selectedOffer;
+        title = `${job.title} | USA Jobs`;
+        description = this.generateMetaDescription(job);
+        const permalink = this.generateJobPermalink(job);
+        canonicalUrl = `${canonicalHostname}${permalink}`;
+        ogTitle = job.title;
+        ogDescription = description;
+        twitterTitle = job.title;
+        twitterDescription = description;
+        jobPostingJson = this.generateJobPostingJson(job, canonicalUrl);
+      } else if (this.state.error) {
+        title = 'Job Not Found | USA Jobs';
+        description = 'The job you are looking for could not be found.';
+        canonicalUrl = `${canonicalHostname}/jobs/`;
+      }
+    } else if (this.state.currentView === 'landing') {
+      if (window.location.pathname.startsWith('/jobs')) {
+        title = 'Jobs | USA Jobs';
+        description = 'Browse available accounting and finance job opportunities. Find your next career move.';
+        canonicalUrl = `${canonicalHostname}/jobs/`;
+        ogTitle = 'Available Jobs | USA Jobs';
+      } else {
+        title = 'USA Jobs | Accounting & Finance Jobs';
+        description = 'Find accounting and finance job opportunities. Browse high-paying CPA positions from top employers.';
+        canonicalUrl = `${canonicalHostname}/`;
+        ogTitle = 'USA Jobs | Accounting & Finance Opportunities';
+      }
+    }
+
+    document.title = title;
+    this.updateMetaTag('description', description);
+    this.updateCanonicalLink(canonicalUrl);
+    this.updateMetaTag('og:title', ogTitle, 'property');
+    this.updateMetaTag('og:description', ogDescription, 'property');
+    this.updateMetaTag('og:type', ogType, 'property');
+    this.updateMetaTag('og:url', canonicalUrl, 'property');
+    this.updateMetaTag('og:site_name', 'USA Jobs', 'property');
+    this.updateMetaTag('twitter:card', 'summary', 'name');
+    this.updateMetaTag('twitter:title', twitterTitle, 'name');
+    this.updateMetaTag('twitter:description', twitterDescription, 'name');
+    this.updateJobPostingJsonLd(jobPostingJson);
+  }
+
+  generateMetaDescription(job) {
+    let parts = [];
+    
+    if (job.company) {
+      parts.push(job.company);
+    }
+    
+    if (job.location_city || job.location_state || job.location_country) {
+      const location = [job.location_city, job.location_state, job.location_country]
+        .filter(Boolean)
+        .join(', ');
+      if (location) parts.push(location);
+    }
+    
+    if (job.employment_type) {
+      parts.push(job.employment_type);
+    }
+    
+    let desc = job.title;
+    if (parts.length > 0) {
+      desc += ' - ' + parts.join(' | ');
+    }
+    
+    if (job.description) {
+      const excerpt = job.description
+        .replace(/<[^>]*>/g, '')
+        .substring(0, 100)
+        .trim();
+      if (excerpt) {
+        desc += '. ' + excerpt + (excerpt.length === 100 ? '...' : '');
+      }
+    }
+    
+    desc = desc.replace(/\s+/g, ' ').trim();
+    if (desc.length > 160) {
+      desc = desc.substring(0, 157) + '...';
+    }
+    
+    return desc;
+  }
+
+  generateJobPostingJson(job, canonicalUrl) {
+    const posting = {
+      '@context': 'https://schema.org',
+      '@type': 'JobPosting',
+      title: job.title,
+      url: canonicalUrl
+    };
+
+    if (job.description) {
+      const plainText = job.description.replace(/<[^>]*>/g, '').trim();
+      if (plainText) {
+        posting.description = plainText.substring(0, 1000);
+      }
+    }
+
+    if (job.created_at) {
+      posting.datePosted = job.created_at;
+    }
+
+    if (job.company) {
+      posting.hiringOrganization = {
+        '@type': 'Organization',
+        name: job.company
+      };
+      if (job.company_domain) {
+        posting.hiringOrganization.url = 'https://' + (job.company_domain.startsWith('http') ? job.company_domain.replace('https://', '').replace('http://', '') : job.company_domain);
+      }
+    }
+
+    if (job.location_city || job.location_state || job.location_country) {
+      posting.jobLocation = {
+        '@type': 'Place',
+        address: {
+          '@type': 'PostalAddress'
+        }
+      };
+      if (job.location_city) posting.jobLocation.address.addressLocality = job.location_city;
+      if (job.location_state) posting.jobLocation.address.addressRegion = job.location_state;
+      if (job.location_country) posting.jobLocation.address.addressCountry = job.location_country;
+    }
+
+    if (job.employment_type) {
+      posting.employmentType = job.employment_type;
+    }
+
+    if (job.salary_min || job.salary_max) {
+      posting.baseSalary = {
+        '@type': 'PriceSpecification',
+        priceCurrency: job.salary_currency || 'USD',
+        price: job.salary_min || job.salary_max
+      };
+      if (job.salary_max && job.salary_min !== job.salary_max) {
+        posting.baseSalary.maxPrice = job.salary_max;
+      }
+      if (job.salary_period) {
+        posting.baseSalary.validThrough = job.salary_period;
+      }
+    }
+
+    return posting;
+  }
+
+  updateMetaTag(name, content, type = 'name') {
+    if (!content) return;
+
+    const attribute = type === 'property' ? 'property' : 'name';
+    const selector = `meta[${attribute}="${name}"]`;
+    let tag = document.querySelector(selector);
+
+    if (tag) {
+      tag.setAttribute('content', content);
+    } else {
+      tag = document.createElement('meta');
+      tag.setAttribute(attribute, name);
+      tag.setAttribute('content', content);
+      document.head.appendChild(tag);
+    }
+  }
+
+  updateCanonicalLink(url) {
+    let link = document.querySelector('link[rel="canonical"]');
+    
+    if (link) {
+      link.setAttribute('href', url);
+    } else {
+      link = document.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      link.setAttribute('href', url);
+      document.head.appendChild(link);
+    }
+  }
+
+  updateJobPostingJsonLd(jobPostingJson) {
+    const existing = document.querySelector('script[data-seo="jobposting"]');
+    if (existing) {
+      existing.remove();
+    }
+
+    if (jobPostingJson) {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-seo', 'jobposting');
+      script.textContent = JSON.stringify(jobPostingJson);
+      document.head.appendChild(script);
+    }
   }
 
   renderLanding() {
     if (this.state.loading) {
       return `
         <section class="hero">
-          <h1>Find Your Next CPA Opportunity</h1>
-          <p>Discover high-paying CPA programs and start earning today</p>
+          <h1>Find Your Next Opportunity</h1>
+          <p>Discover high-paying accounting and finance jobs</p>
           <p class="loading-message">Loading opportunities...</p>
         </section>
       `;
@@ -288,7 +569,7 @@ class CPAJobsApp {
     if (this.state.error) {
       return `
         <section class="hero">
-          <h1>Find Your Next CPA Opportunity</h1>
+          <h1>Find Your Next Opportunity</h1>
           <p class="error-message">Error: ${this.state.error}</p>
           <button onclick="location.reload()" class="apply-btn">Retry</button>
         </section>
@@ -298,8 +579,8 @@ class CPAJobsApp {
     if (!this.state.offers || this.state.offers.length === 0) {
       return `
         <section class="hero">
-          <h1>Find Your Next CPA Opportunity</h1>
-          <p>Discover high-paying CPA programs and start earning today</p>
+          <h1>Find Your Next Opportunity</h1>
+          <p>Discover high-paying accounting and finance jobs</p>
         </section>
         <section class="offer-list">
           <h2>Available Opportunities</h2>
@@ -310,8 +591,9 @@ class CPAJobsApp {
 
     return `
       <section class="hero">
-        <h1>Find Your Next CPA Opportunity</h1>
-        <p>Discover high-paying CPA programs and start earning today</p>
+        <h1>Find Your Next Opportunity</h1>
+        <p>Discover high-paying accounting and finance jobs</p>
+        <a href="/jobs/" class="cta-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">View All Jobs</a>
       </section>
 
       <section class="offer-list">
@@ -351,17 +633,16 @@ class CPAJobsApp {
     if (!this.state.selectedOffer) {
       return `
         <div class="offer-detail">
-          <button onclick="app.navigate('landing')" class="back-btn">← Back</button>
+          <a href="/jobs/" class="back-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">← Back to Jobs</a>
           <div class="offer-detail-card">
             <div class="error-message">Offer not found or loading...</div>
-            <button onclick="app.navigate('landing')" class="apply-btn">Back to Opportunities</button>
+            <a href="/jobs/" class="apply-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">Back to Opportunities</a>
           </div>
         </div>
       `;
     }
 
     const o = this.state.selectedOffer;
-    // Backend returns flat columns: salary_min, salary_max, salary_display
     const hasCompany = o.company || o.company_domain;
     const hasLocation = o.location || o.location_city || o.location_country;
     const hasSalary = o.salary_min || o.salary_max || o.salary_display;
@@ -369,8 +650,7 @@ class CPAJobsApp {
 
     return `
       <div class="offer-detail">
-        <button onclick="app.navigate('landing')" class="back-btn">← Back</button>
-
+        <a href="/jobs/" class="back-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">← Back to Jobs</a>
         <div class="offer-detail-card">
           <h1>${o.title}</h1>
           
@@ -451,12 +731,6 @@ class CPAJobsApp {
       </div>
     `;
   }
-            </a>
-          </div>
-        </div>
-      </div>
-    `;
-  }
 
   renderAdmin() {
     return `
@@ -478,18 +752,21 @@ class CPAJobsApp {
   }
 
   renderOfferCard(offer) {
+    const permalink = this.generateJobPermalink(offer);
     return `
-      <div class="offer-card" onclick="app.navigate('offer-detail?id=${offer.id}')">
-        <h3>${offer.title}</h3>
-        <div class="offer-meta">
-          <span class="category">${offer.category?.name || 'General'}</span>
-          <span class="status ${offer.status}">${offer.status}</span>
-        </div>
-        <p class="description">${offer.description}</p>
-        <div class="offer-footer">
-          <span class="payout">$${offer.payout} ${offer.payout_type}</span>
-          <span class="status ${offer.status}">${offer.status}</span>
-        </div>
+      <div class="offer-card">
+        <a href="${permalink}" class="offer-card-link" onclick="event.preventDefault(); app.navigate('${permalink}')">
+          <h3>${offer.title}</h3>
+          <div class="offer-meta">
+            <span class="category">${offer.category?.name || 'General'}</span>
+            <span class="status ${offer.status}">${offer.status}</span>
+          </div>
+          <p class="description">${offer.description}</p>
+          <div class="offer-footer">
+            <span class="payout">$${offer.payout} ${offer.payout_type}</span>
+            <span class="status ${offer.status}">${offer.status}</span>
+          </div>
+        </a>
       </div>
     `;
   }
@@ -515,12 +792,9 @@ class CPAJobsApp {
 
     if (result.success) {
       console.log('Click tracked successfully:', result);
-      // The backend handles the actual redirect to the CPA destination
-      // We just need to track the click and let the backend handle the redirect
       return true;
     } else {
       console.error('Click tracking failed:', result.error);
-      // Show error state but continue navigation
       this.state.error = result.error || 'Tracking failed';
       this.render();
       return false;

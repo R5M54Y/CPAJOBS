@@ -1,4 +1,4 @@
-name = "cpajobs"
+name = "usajobs"
 main = "src/main.js"
 
 # Cloudflare KV namespace configuration
