@@ -877,7 +877,7 @@ footer {
 }
 `;
 
-const APP_JS = `// app.js - USA JOBS Frontend MVP
+const APP_JS = String.raw`// app.js - USA JOBS Frontend MVP
 
 class CPAJobsApp {
   constructor() {
