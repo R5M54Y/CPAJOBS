@@ -570,8 +570,8 @@ class CPAJobsApp {
       return `
         <section class="hero">
           <h1>Find Your Next Opportunity</h1>
-          <p class="error-message">Error: ${this.state.error}</p>
-          <button onclick="location.reload()" class="apply-btn">Retry</button>
+          <p class="error-message">⚠️ Error: ${this.state.error}</p>
+          <button onclick="location.reload()" class="apply-btn">Try Again</button>
         </section>
       `;
     }
@@ -584,7 +584,10 @@ class CPAJobsApp {
         </section>
         <section class="offer-list">
           <h2>Available Opportunities</h2>
-          <div class="no-results">No opportunities available at this time. Please check back soon.</div>
+          <div class="no-results">
+            <p>No opportunities available at this time.</p>
+            <p style="font-size: 0.875rem; margin-top: 0.5rem;">Please check back soon for new listings.</p>
+          </div>
         </section>
       `;
     }
@@ -593,12 +596,14 @@ class CPAJobsApp {
       <section class="hero">
         <h1>Find Your Next Opportunity</h1>
         <p>Discover high-paying accounting and finance jobs</p>
-        <a href="/jobs/" class="cta-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">View All Jobs</a>
+        <a href="/jobs/" class="cta-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">Browse ${this.state.offers.length} Jobs</a>
       </section>
 
       <section class="offer-list">
-        <h2>Available Opportunities</h2>
-        ${this.state.offers.map(offer => this.renderOfferCard(offer)).join('')}
+        <h2>Featured Opportunities</h2>
+        <div class="offer-grid">
+          ${this.state.offers.slice(0, 6).map(offer => this.renderOfferCard(offer)).join('')}
+        </div>
       </section>
     `;
   }
@@ -608,12 +613,17 @@ class CPAJobsApp {
       ? this.state.offers.filter(offer => offer.category?.slug === this.state.selectedCategory)
       : this.state.offers;
 
+    const resultCount = filteredOffers.length;
+    const categoryName = this.state.selectedCategory 
+      ? this.state.categories.find(c => c.slug === this.state.selectedCategory)?.name || 'Category'
+      : 'All';
+
     return `
       <div class="categories-container">
-        <h2>Categories</h2>
+        <h2>${categoryName} Jobs ${resultCount > 0 ? `(${resultCount})` : ''}</h2>
         <div class="category-filters">
           <button class="category-filter ${!this.state.selectedCategory ? 'active' : ''}" onclick="app.setSelectedCategory(null)">
-            All
+            All Jobs
           </button>
           ${this.state.categories.map(cat => `
             <button class="category-filter ${this.state.selectedCategory === cat.slug ? 'active' : ''}" onclick="app.setSelectedCategory('${cat.slug}')">
@@ -622,9 +632,16 @@ class CPAJobsApp {
           `).join('')}
         </div>
 
+        ${resultCount > 0 ? `
         <div class="offer-grid">
           ${filteredOffers.map(offer => this.renderOfferCard(offer)).join('')}
         </div>
+        ` : `
+        <div class="no-results">
+          <p>No jobs available in this category.</p>
+          <p style="font-size: 0.875rem; margin-top: 0.5rem;">Try selecting a different category.</p>
+        </div>
+        `}
       </div>
     `;
   }
@@ -635,8 +652,10 @@ class CPAJobsApp {
         <div class="offer-detail">
           <a href="/jobs/" class="back-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">← Back to Jobs</a>
           <div class="offer-detail-card">
-            <div class="error-message">Offer not found or loading...</div>
-            <a href="/jobs/" class="apply-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">Back to Opportunities</a>
+            <div class="error-message">
+              <p style="margin: 0;">⚠️ Job not found or unavailable</p>
+            </div>
+            <a href="/jobs/" class="apply-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">Browse All Jobs</a>
           </div>
         </div>
       `;
@@ -647,6 +666,8 @@ class CPAJobsApp {
     const hasLocation = o.location || o.location_city || o.location_country;
     const hasSalary = o.salary_min || o.salary_max || o.salary_display;
     const applyUrl = o.apply_url || o.url;
+    
+    const location = o.location || [o.location_city, o.location_state, o.location_country].filter(Boolean).join(', ') || 'Not specified';
 
     return `
       <div class="offer-detail">
@@ -655,40 +676,57 @@ class CPAJobsApp {
           <h1>${o.title}</h1>
           
           <div class="job-header-meta">
-            ${hasCompany ? `<div class="meta-item"><strong>Company:</strong> ${o.company}${o.company_domain ? ` (${o.company_domain})` : ''}</div>` : ''}
-            ${hasLocation ? `<div class="meta-item"><strong>Location:</strong> ${o.location || [o.location_city, o.location_state, o.location_country].filter(Boolean).join(', ')}</div>` : ''}
-            ${o.remote !== undefined ? `<div class="meta-item"><strong>Remote:</strong> ${o.remote ? 'Yes' : 'On-site'}</div>` : ''}
-            ${o.employment_type ? `<div class="meta-item"><strong>Employment:</strong> ${o.employment_type}</div>` : ''}
-            ${o.status ? `<div class="meta-item"><strong>Status:</strong> <span class="status ${o.status}">${o.status}</span></div>` : ''}
+            ${hasCompany ? `
+            <div class="meta-item">
+              <strong>Company</strong>
+              <span>${o.company}${o.company_domain ? ` · ${o.company_domain}` : ''}</span>
+            </div>` : ''}
+            ${hasLocation ? `
+            <div class="meta-item">
+              <strong>Location</strong>
+              <span>${location}</span>
+            </div>` : ''}
+            ${o.remote !== undefined && o.remote !== null ? `
+            <div class="meta-item">
+              <strong>Work Mode</strong>
+              <span>${o.remote ? '✓ Remote' : 'On-site'}</span>
+            </div>` : ''}
+            ${o.employment_type ? `
+            <div class="meta-item">
+              <strong>Employment Type</strong>
+              <span>${o.employment_type}</span>
+            </div>` : ''}
+            ${o.category_id ? `
+            <div class="meta-item">
+              <strong>Category</strong>
+              <span>${o.category_id.replace('cat-', '').charAt(0).toUpperCase() + o.category_id.replace('cat-', '').slice(1)}</span>
+            </div>` : ''}
+            ${o.date_posted ? `
+            <div class="meta-item">
+              <strong>Posted</strong>
+              <span>${new Date(o.date_posted).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+            </div>` : ''}
           </div>
 
           ${hasSalary ? `
           <div class="salary-section">
             <h3>Compensation</h3>
             <div class="salary-display">
-              ${o.salary_display || (o.salary_min || o.salary_max) ? `${o.salary_display || `${o.salary_currency || ''} ${o.salary_min || ''}${o.salary_min && o.salary_max ? ' - ' : ''}${o.salary_max || ''} ${o.salary_period || 'per year'}`}` : 'Not specified'}
+              ${o.salary_display || (o.salary_min || o.salary_max) ? `${o.salary_display || `${o.salary_currency || 'USD'} ${o.salary_min ? o.salary_min.toLocaleString() : ''}${o.salary_min && o.salary_max ? ' - ' : ''}${o.salary_max ? o.salary_max.toLocaleString() : ''} ${o.salary_period || 'per year'}`}` : 'Not specified'}
             </div>
           </div>` : ''}
+
+          ${applyUrl ? `
+          <a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="app.handleOfferClick('${o.id}')">Apply for this Position</a>
+          ` : `
+          <button disabled class="apply-btn" style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>
+          `}
 
           ${o.description_html || o.description ? `
           <div class="description-section">
             <h3>Job Description</h3>
             <div class="description-content">
               ${o.description_html ? o.description_html : `<p>${o.description}</p>`}
-            </div>
-          </div>` : ''}
-
-          ${o.experience ? `
-          <div class="job-details">
-            <h3>Experience Required</h3>
-            <p>${o.experience}</p>
-          </div>` : ''}
-
-          ${o.skills && o.skills.length > 0 ? `
-          <div class="skills-section">
-            <h3>Skills</h3>
-            <div class="skills-list">
-              ${o.skills.map(skill => `<span class="skill-badge">${skill}</span>`).join('')}
             </div>
           </div>` : ''}
 
@@ -716,6 +754,20 @@ class CPAJobsApp {
             <div class="detail-content">${o.education}</div>
           </div>` : ''}
 
+          ${o.experience ? `
+          <div class="job-details">
+            <h3>Experience Required</h3>
+            <div class="detail-content">${o.experience}</div>
+          </div>` : ''}
+
+          ${o.skills && o.skills.length > 0 ? `
+          <div class="skills-section">
+            <h3>Required Skills</h3>
+            <div class="skills-list">
+              ${o.skills.map(skill => `<span class="skill-badge">${skill}</span>`).join('')}
+            </div>
+          </div>` : ''}
+
           ${o.benefits ? `
           <div class="job-details">
             <h3>Benefits</h3>
@@ -723,10 +775,8 @@ class CPAJobsApp {
           </div>` : ''}
 
           ${applyUrl ? `
-          <a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn">Apply Now</a>
-          ` : `
-          <button disabled class="apply-btn" style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>
-          `}
+          <a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="app.handleOfferClick('${o.id}')">Apply for this Position</a>
+          ` : ''}
         </div>
       </div>
     `;
@@ -753,18 +803,21 @@ class CPAJobsApp {
 
   renderOfferCard(offer) {
     const permalink = this.generateJobPermalink(offer);
+    const location = offer.location || [offer.location_city, offer.location_state, offer.location_country].filter(Boolean).join(', ') || 'Location not specified';
+    const hasDescription = offer.description && offer.description.trim().length > 0;
+    
     return `
       <div class="offer-card">
         <a href="${permalink}" class="offer-card-link" onclick="event.preventDefault(); app.navigate('${permalink}')">
           <h3>${offer.title}</h3>
           <div class="offer-meta">
-            <span class="category">${offer.category?.name || 'General'}</span>
-            <span class="status ${offer.status}">${offer.status}</span>
+            <span class="category">${offer.category?.name || offer.category_id?.replace('cat-', '').toUpperCase() || 'General'}</span>
+            ${offer.employment_type ? `<span style="display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; background: #f0f0f0; font-size: 0.8rem;">${offer.employment_type}</span>` : ''}
           </div>
-          <p class="description">${offer.description}</p>
+          ${hasDescription ? `<p>${offer.description.substring(0, 120)}...</p>` : ''}
           <div class="offer-footer">
-            <span class="payout">$${offer.payout} ${offer.payout_type}</span>
-            <span class="status ${offer.status}">${offer.status}</span>
+            <span style="font-size: 0.8rem; color: #666;">${location}</span>
+            ${offer.remote ? '<span style="font-size: 0.8rem; color: #059669;">✓ Remote</span>' : ''}
           </div>
         </a>
       </div>
