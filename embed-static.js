@@ -4,38 +4,38 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const baseDir = __dirname;
 
 // Read static files
-const indexHtml = fs.readFileSync(path.join(baseDir, 'static/index.html'), 'utf8');
-const appJs = fs.readFileSync(path.join(baseDir, 'static/js/app.js'), 'utf8');
-const styleCss = fs.readFileSync(path.join(baseDir, 'static/css/style.css'), 'utf8');
+const indexHtml = fs.readFileSync(path.join(__dirname, 'static/index.html'), 'utf8');
+const appJs = fs.readFileSync(path.join(__dirname, 'static/js/app.js'), 'utf8');
+const styleCss = fs.readFileSync(path.join(__dirname, 'static/css/style.css'), 'utf8');
 
 // Read current main.js
-const mainJs = fs.readFileSync(path.join(baseDir, 'src/main.js'), 'utf8');
+let mainJs = fs.readFileSync(path.join(__dirname, 'src/main.js'), 'utf8');
 
-// Always regenerate - don't early exit
-// Find insertion point (after INDEX_HTML constant)
-const insertMarker = '\n// Health check endpoint - checks infrastructure status';
-const insertIndex = mainJs.indexOf(insertMarker);
+// Helper to escape template literal content
+const escapeTemplate = (str) => str.replace(/`/g, '\\`').replace(/\$/g, '\\$');
 
-if (insertIndex === -1) {
-  console.error('Could not find insertion point');
-  process.exit(1);
-}
+// Replace INDEX_HTML constant (find from start to first backtick-semicolon)
+mainJs = mainJs.replace(
+  /const INDEX_HTML = `[\s\S]*?`;\n\n/,
+  `const INDEX_HTML = \`${escapeTemplate(indexHtml)}\`;\n\n`
+);
 
-// Build remaining static constants
-const staticConstants = `
-const STYLE_CSS = \`${styleCss.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+// Replace STYLE_CSS constant
+mainJs = mainJs.replace(
+  /const STYLE_CSS = `[\s\S]*?`;\n\n/,
+  `const STYLE_CSS = \`${escapeTemplate(styleCss)}\`;\n\n`
+);
 
-const APP_JS = \`${appJs.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
-`;
-
-// Insert constants
-const newMainJs = mainJs.slice(0, insertIndex) + staticConstants + mainJs.slice(insertIndex);
+// Replace APP_JS constant
+mainJs = mainJs.replace(
+  /const APP_JS = `[\s\S]*?`;\n\n/,
+  `const APP_JS = \`${escapeTemplate(appJs)}\`;\n\n`
+);
 
 // Write back
-fs.writeFileSync(path.join(baseDir, 'src/main.js'), newMainJs, 'utf8');
+fs.writeFileSync(path.join(__dirname, 'src/main.js'), mainJs, 'utf8');
 
 console.log('✓ Static files embedded successfully');
 console.log(`  INDEX_HTML: ${indexHtml.length} bytes`);

@@ -137,6 +137,7 @@ class CPAJobsApp {
       }
     } catch (error) {
       this.state.error = 'Failed to load offer details';
+      this.state.selectedOffer = null; // Clear stale state
       console.error('Offer detail error:', error);
     } finally {
       this.setLoading(false);
@@ -279,7 +280,7 @@ class CPAJobsApp {
         <section class="hero">
           <h1>Find Your Next CPA Opportunity</h1>
           <p>Discover high-paying CPA programs and start earning today</p>
-          <p>Loading opportunities...</p>
+          <p class="loading-message">Loading opportunities...</p>
         </section>
       `;
     }
@@ -288,7 +289,8 @@ class CPAJobsApp {
       return `
         <section class="hero">
           <h1>Find Your Next CPA Opportunity</h1>
-          <p class="error">Error: ${this.state.error}</p>
+          <p class="error-message">Error: ${this.state.error}</p>
+          <button onclick="location.reload()" class="apply-btn">Retry</button>
         </section>
       `;
     }
@@ -300,8 +302,8 @@ class CPAJobsApp {
           <p>Discover high-paying CPA programs and start earning today</p>
         </section>
         <section class="offer-list">
-          <h2>Opportunities</h2>
-          <p class="no-results">No opportunities available at this time. Please check back soon.</p>
+          <h2>Available Opportunities</h2>
+          <div class="no-results">No opportunities available at this time. Please check back soon.</div>
         </section>
       `;
     }
@@ -347,14 +349,23 @@ class CPAJobsApp {
 
   renderOfferDetail() {
     if (!this.state.selectedOffer) {
-      return `<p>Offer not found or loading...</p>`;
+      return `
+        <div class="offer-detail">
+          <button onclick="app.navigate('landing')" class="back-btn">← Back</button>
+          <div class="offer-detail-card">
+            <div class="error-message">Offer not found or loading...</div>
+            <button onclick="app.navigate('landing')" class="apply-btn">Back to Opportunities</button>
+          </div>
+        </div>
+      `;
     }
 
     const o = this.state.selectedOffer;
-    const salary = o.salary || {};
+    // Backend returns flat columns: salary_min, salary_max, salary_display
     const hasCompany = o.company || o.company_domain;
     const hasLocation = o.location || o.location_city || o.location_country;
-    const hasSalary = salary.min || salary.max || salary.display;
+    const hasSalary = o.salary_min || o.salary_max || o.salary_display;
+    const applyUrl = o.apply_url || o.url;
 
     return `
       <div class="offer-detail">
@@ -368,13 +379,14 @@ class CPAJobsApp {
             ${hasLocation ? `<div class="meta-item"><strong>Location:</strong> ${o.location || [o.location_city, o.location_state, o.location_country].filter(Boolean).join(', ')}</div>` : ''}
             ${o.remote !== undefined ? `<div class="meta-item"><strong>Remote:</strong> ${o.remote ? 'Yes' : 'On-site'}</div>` : ''}
             ${o.employment_type ? `<div class="meta-item"><strong>Employment:</strong> ${o.employment_type}</div>` : ''}
+            ${o.status ? `<div class="meta-item"><strong>Status:</strong> <span class="status ${o.status}">${o.status}</span></div>` : ''}
           </div>
 
           ${hasSalary ? `
           <div class="salary-section">
             <h3>Compensation</h3>
             <div class="salary-display">
-              ${salary.display || (salary.min || salary.max) ? `${salary.display || `${salary.currency || ''} ${salary.min || ''}${salary.min && salary.max ? ' - ' : ''}${salary.max || ''} ${salary.period || 'per month'}`}` : 'Not specified'}
+              ${o.salary_display || (o.salary_min || o.salary_max) ? `${o.salary_display || `${o.salary_currency || ''} ${o.salary_min || ''}${o.salary_min && o.salary_max ? ' - ' : ''}${o.salary_max || ''} ${o.salary_period || 'per year'}`}` : 'Not specified'}
             </div>
           </div>` : ''}
 
@@ -425,30 +437,20 @@ class CPAJobsApp {
           </div>` : ''}
 
           ${o.benefits ? `
-          <div class="benefits-section">
+          <div class="job-details">
             <h3>Benefits</h3>
-            <div class="benefits-content">
-              ${Array.isArray(o.benefits) ? o.benefits.map(b => `<div class="benefit-item">• ${b}</div>`).join('') : `<div class="benefit-item">${o.benefits}</div>`}
-            </div>
+            <div class="detail-content">${Array.isArray(o.benefits) ? o.benefits.map(b => `<div>• ${b}</div>`).join('') : o.benefits}</div>
           </div>` : ''}
 
-          <div class="offer-footer-info">
-            <div class="info-item">
-              <strong>Status:</strong> <span class="status-badge ${o.status}">${o.status}</span>
-            </div>
-            ${o.date_posted ? `<div class="info-item"><strong>Posted:</strong> ${new Date(o.date_posted).toLocaleDateString()}</div>` : ''}
-            ${o.valid_through ? `<div class="info-item"><strong>Apply By:</strong> ${new Date(o.valid_through).toLocaleDateString()}</div>` : ''}
-            <div class="info-item"><strong>Views:</strong> ${o.click_count || 0}</div>
-          </div>
-
-          ${o.source ? `
-          <div class="source-section">
-            <p><small>Source: <strong>${o.source.name}</strong> | <a href="${o.url}" target="_blank">View Original</a></small></p>
-          </div>` : ''}
-
-          <div class="offer-cta">
-            <a href="${o.apply_url || o.url}" target="_blank" class="cta-button" onclick="app.handleOfferClick('${o.id}')">
-              Apply Now
+          ${applyUrl ? `
+          <a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn">Apply Now</a>
+          ` : `
+          <button disabled class="apply-btn" style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>
+          `}
+        </div>
+      </div>
+    `;
+  }
             </a>
           </div>
         </div>

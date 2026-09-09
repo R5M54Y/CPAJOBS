@@ -1,18 +1,48 @@
 /* static/css/style.css - CPA JOBS MVP Styles
-   Phase 0: Foundation - Basic styling */
+   Phase 2: Mobile Responsive + States */
+
+:root {
+  --primary: #007acc;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --border-color: #e0e0e0;
+  --bg-light: #fafafa;
+  --bg-white: #fff;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
 
 body {
   font-family: system-ui, -apple-system, sans-serif;
   margin: 0;
   padding: 0;
-  background: #fafafa;
-  color: #333;
+  background: var(--bg-light);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
+main {
+  flex: 1;
+}
+
+/* Header & Navigation */
 header {
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 1rem 2rem;
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .nav {
@@ -21,71 +51,439 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  padding: 0 1rem;
 }
 
 .logo {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: bold;
-  color: #007acc;
+  color: var(--primary);
   text-decoration: none;
+  flex-shrink: 0;
+}
+
+.nav-links {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
 }
 
 .nav-links a {
-  margin-left: 1rem;
-  color: #333;
+  color: var(--text-primary);
   text-decoration: none;
-  font-size: 0.9rem;
+  padding: 0.5rem;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
 }
 
+.nav-links a:hover {
+  color: var(--primary);
+}
+
+/* Hero Section */
 .hero {
   max-width: 1200px;
-  margin: 3rem auto;
-  padding: 2rem;
+  margin: 1.5rem auto;
+  padding: 1.5rem;
   text-align: center;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: var(--bg-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
 
 .hero h1 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
 }
 
 .hero p {
-  color: #666;
-  margin-bottom: 2rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
 }
 
+/* Jobs List */
 .offer-list {
   max-width: 1200px;
-  margin: 2rem auto;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+.offer-list h2 {
+  font-size: 1.25rem;
+  margin: 1rem 0 0.75rem 0;
 }
 
 .offer-card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--bg-white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+}
+
+.offer-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0,122,204,0.1);
 }
 
 .offer-card h3 {
   margin: 0 0 0.5rem 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.offer-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.category, .status {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #f0f0f0;
+}
+
+.status.active {
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
 .offer-card p {
-  color: #666;
-  font-size: 0.9rem;
-  margin: 0.2rem 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+  line-height: 1.4;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-footer {
-  background: #fff;
-  border-top: 1px solid #e0e0e0;
-  padding: 1rem 2rem;
-  text-align: center;
+.offer-footer {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
   font-size: 0.8rem;
+}
+
+.payout {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* Offer Detail */
+.offer-detail {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.back-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  min-height: 44px;
+  min-width: 44px;
+  margin-bottom: 1rem;
+}
+
+.back-btn:hover {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.offer-detail-card {
+  background: var(--bg-white);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.offer-detail-card h1 {
+  font-size: 1.5rem;
+  margin: 0 0 1rem 0;
+  word-break: break-word;
+}
+
+.offer-detail-card h3 {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.75rem 0;
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 0.5rem;
+}
+
+.job-header-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.meta-item {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.meta-item strong {
+  min-width: 80px;
+}
+
+.salary-section {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.salary-display {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.description-section {
+  margin-bottom: 1.5rem;
+}
+
+.description-content {
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.description-content p {
+  margin: 0.5rem 0;
+}
+
+.job-details {
+  margin-bottom: 1.5rem;
+}
+
+.detail-content {
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.skills-section {
+  margin-bottom: 1.5rem;
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.skill-badge {
+  display: inline-block;
+  background: #e3f2fd;
+  color: var(--primary);
+  padding: 0.4rem 0.8rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
+}
+
+/* Apply Button */
+.apply-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  cursor: pointer;
+  min-height: 44px;
+  margin-top: 1rem;
+  transition: background 0.2s;
+}
+
+.apply-btn:hover {
+  background: #0056a0;
+}
+
+/* State Messages */
+.no-results, .error-message, .loading-message {
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.error {
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.error-message {
+  background: #ffebee;
+  border: 1px solid #ef5350;
+  border-radius: var(--radius);
+  color: #d32f2f;
+}
+
+.loading-message {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Footer */
+footer {
+  background: var(--bg-white);
+  border-top: 1px solid var(--border-color);
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
   color: #888;
+  margin-top: 2rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  header {
+    padding: 0.75rem;
+  }
+
+  .nav {
+    padding: 0;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+  }
+
+  .nav-links {
+    gap: 0;
+    font-size: 0.8rem;
+  }
+
+  .hero {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  .hero h1 {
+    font-size: 1.25rem;
+  }
+
+  .hero p {
+    font-size: 0.9rem;
+  }
+
+  .offer-list {
+    padding: 0 0.75rem;
+  }
+
+  .offer-card {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .offer-detail-card {
+    padding: 1rem;
+  }
+
+  .offer-detail-card h1 {
+    font-size: 1.25rem;
+  }
+
+  .offer-detail-card h3 {
+    font-size: 1rem;
+  }
+
+  .job-header-meta {
+    gap: 0.25rem;
+  }
+
+  .meta-item {
+    font-size: 0.85rem;
+  }
+
+  .apply-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .nav-links a {
+    padding: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .hero h1 {
+    font-size: 1.1rem;
+  }
+
+  .offer-card h3 {
+    font-size: 0.9rem;
+  }
+
+  .offer-detail-card h1 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Desktop Optimization */
+@media (min-width: 768px) {
+  .hero {
+    margin: 2rem auto;
+    padding: 2rem;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .offer-list {
+    margin: 2rem auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .offer-card {
+    margin-bottom: 0;
+  }
+
+  .offer-detail {
+    padding: 2rem;
+  }
+
+  .offer-detail-card {
+    padding: 2rem;
+  }
+
+  .offer-detail-card h1 {
+    font-size: 2rem;
+  }
+
+  .job-header-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
