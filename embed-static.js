@@ -12,18 +12,24 @@ const styleCss = fs.readFileSync(path.join(__dirname, 'static/css/style.css'), '
 // Read current main.js
 let mainJs = fs.readFileSync(path.join(__dirname, 'src/main.js'), 'utf8');
 
-// Helper to escape template literal content
+// Helper to escape template literal content safely
 const escapeTemplate = (str) => {
   return str
     .replace(/\\/g, '\\\\')  // Escape backslashes first
-    .replace(/`/g, '\\`')     // Escape backticks
-    .replace(/\$/g, '\\$');   // Escape dollar signs
+    .replace(/`/g, '\\`');    // Escape backticks only (NOT dollar signs)
 };
 
 // Find and replace constants by finding the exact marker lines
 function replaceConstant(content, constName, newValue) {
-  const startMarker = `const ${constName} = \``;
-  const startIdx = content.indexOf(startMarker);
+  // Try both patterns: standard template and String.raw template
+  let startMarker = `const ${constName} = \``;
+  let startIdx = content.indexOf(startMarker);
+  
+  if (startIdx === -1) {
+    // Try String.raw pattern
+    startMarker = `const ${constName} = String.raw\``;
+    startIdx = content.indexOf(startMarker);
+  }
   
   if (startIdx === -1) {
     console.error(`Could not find ${constName} start marker`);
