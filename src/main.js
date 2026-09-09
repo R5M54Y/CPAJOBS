@@ -1509,16 +1509,40 @@ const getOfferDetail = async (request, env, offerId) => {
   }
 };
 
+// SEO Phase 7: Normalize category slug consistently
+const normalizeCategorySlug = (categoryId) => {
+  if (!categoryId) return 'general';
+  // Convert cat-engineering → engineering
+  return categoryId
+    .toLowerCase()
+    .replace(/^cat-/, '')
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
+const getCategoryNameFromId = (categoryId) => {
+  if (!categoryId) return 'General';
+  // Convert cat-engineering → Engineering
+  return categoryId
+    .replace(/^cat-/, '')
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 // GET /categories - List categories
 const getCategories = async (env) => {
   try {
     const result = await env.DB.prepare(
-      'SELECT DISTINCT category FROM offers WHERE status = "active" ORDER BY category'
+      'SELECT DISTINCT category_id FROM offers WHERE status = "active" ORDER BY category_id'
     ).all();
 
     const categories = (result.results || []).map(row => ({
-      name: row.category || 'General',
-      slug: normalizeCategorySlug(row.category || 'general')
+      name: getCategoryNameFromId(row.category_id || 'general'),
+      slug: normalizeCategorySlug(row.category_id || 'general')
     }));
 
     return new Response(JSON.stringify({
@@ -1535,18 +1559,6 @@ const getCategories = async (env) => {
   }
 };
 
-// SEO Phase 7: Normalize category slug consistently
-const normalizeCategorySlug = (category) => {
-  if (!category) return 'general';
-  return category
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-};
-
 // SEO Phase 7: Serve category landing page
 const serveCategoryPage = async (categorySlug, env) => {
   try {
@@ -1554,13 +1566,13 @@ const serveCategoryPage = async (categorySlug, env) => {
     
     // Get all active categories
     const categoriesResult = await env.DB.prepare(
-      'SELECT DISTINCT category FROM offers WHERE status = "active"'
+      'SELECT DISTINCT category_id FROM offers WHERE status = "active"'
     ).all();
     
     // Find matching category (case-insensitive)
     const categories = (categoriesResult.results || []);
     const matchedCategory = categories.find(row => {
-      const slug = normalizeCategorySlug(row.category);
+      const slug = normalizeCategorySlug(row.category_id);
       return slug === categorySlug;
     });
     
@@ -1568,12 +1580,13 @@ const serveCategoryPage = async (categorySlug, env) => {
       return new Response('Category not found', { status: 404 });
     }
     
-    const categoryName = matchedCategory.category || 'General';
+    const categoryId = matchedCategory.category_id || 'general';
+    const categoryName = getCategoryNameFromId(categoryId);
     
     // Get jobs for this category
     const jobsResult = await env.DB.prepare(
-      'SELECT id, title, description, category FROM offers WHERE status = "active" AND category = ? ORDER BY created_at DESC'
-    ).bind(categoryName).all();
+      'SELECT id, title, description, category_id FROM offers WHERE status = "active" AND category_id = ? ORDER BY created_at DESC'
+    ).bind(categoryId).all();
     
     const jobs = jobsResult.results || [];
     const jobCount = jobs.length;
@@ -1736,17 +1749,17 @@ const generateSitemap = async (env) => {
     
     // SEO Phase 7: Category landing pages
     const categoriesResult = await env.DB.prepare(
-      'SELECT DISTINCT category FROM offers WHERE status = "active"'
+      'SELECT DISTINCT category_id FROM offers WHERE status = "active"'
     ).all();
     
     const categories = (categoriesResult.results || []);
     for (const catRow of categories) {
-      if (catRow.category) {
-        const categorySlug = normalizeCategorySlug(catRow.category);
+      if (catRow.category_id) {
+        const categorySlug = normalizeCategorySlug(catRow.category_id);
         // Only include categories with active jobs
         const countResult = await env.DB.prepare(
-          'SELECT COUNT(*) as count FROM offers WHERE status = "active" AND category = ?'
-        ).bind(catRow.category).first();
+          'SELECT COUNT(*) as count FROM offers WHERE status = "active" AND category_id = ?'
+        ).bind(catRow.category_id).first();
         
         if (countResult && countResult.count > 0) {
           xml += '  <url>\n';
