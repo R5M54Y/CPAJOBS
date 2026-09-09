@@ -560,62 +560,42 @@ class CPAJobsApp {
     
     if (this.state.loading) {
       return `
-        <section class="homepage-hero">
+        <section class="hero">
           <div class="hero-container">
-            <div class="hero-content">
-              <h1 class="hero-title">Find Your Next Opportunity</h1>
-              <p class="hero-subtitle">Discover accounting and finance jobs from top employers. Start your career journey today.</p>
-              
-              <div class="search-box">
-                <form class="search-form" onsubmit="event.preventDefault(); app.navigate('/jobs/')">
-                  <div class="search-input-wrapper">
-                    <input type="text" class="search-input" placeholder="Job title or keyword" aria-label="Job title search">
-                  </div>
-                  <button type="submit" class="search-btn">Find Jobs</button>
-                </form>
-              </div>
+            <h1>Find The Best Job For Your Future</h1>
+            <p>It is a long established fact that a reader will be distracted by the readable.</p>
+            <div class="search-container">
+              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
+              <button class="search-btn">Search</button>
             </div>
           </div>
         </section>
         
-        <section class="section featured-jobs">
-          <div class="section-container">
-            <div class="section-header">
-              <h2 class="section-title">Featured Opportunities</h2>
-            </div>
-            <div class="loading-message">Loading opportunities...</div>
-          </div>
+        <section class="section">
+          <h2 class="section-title">RECENT JOBS</h2>
+          <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+          <div class="loading-message">Loading opportunities...</div>
         </section>
       `;
     }
 
     if (this.state.error) {
       return `
-        <section class="homepage-hero">
+        <section class="hero">
           <div class="hero-container">
-            <div class="hero-content">
-              <h1 class="hero-title">Find Your Next Opportunity</h1>
-              <p class="hero-subtitle">Discover accounting and finance jobs from top employers. Start your career journey today.</p>
-              
-              <div class="search-box">
-                <form class="search-form" onsubmit="event.preventDefault(); app.navigate('/jobs/')">
-                  <div class="search-input-wrapper">
-                    <input type="text" class="search-input" placeholder="Job title or keyword" aria-label="Job title search">
-                  </div>
-                  <button type="submit" class="search-btn">Find Jobs</button>
-                </form>
-              </div>
+            <h1>Find The Best Job For Your Future</h1>
+            <p>It is a long established fact that a reader will be distracted by the readable.</p>
+            <div class="search-container">
+              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
+              <button class="search-btn">Search</button>
             </div>
           </div>
         </section>
         
-        <section class="section featured-jobs">
-          <div class="section-container">
-            <div class="section-header">
-              <h2 class="section-title">Featured Opportunities</h2>
-            </div>
-            <div class="error-message">Error loading jobs: ${this.state.error}</div>
-          </div>
+        <section class="section">
+          <h2 class="section-title">RECENT JOBS</h2>
+          <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+          <div class="error-message">Error loading jobs: ${this.state.error}</div>
         </section>
       `;
     }
@@ -640,13 +620,23 @@ class CPAJobsApp {
           </div>
         </section>
         
-        <section class="section featured-jobs">
-          <div class="section-container">
-            <div class="section-header">
-              <h2 class="section-title">Featured Opportunities</h2>
+    if (jobCount === 0) {
+      return `
+        <section class="hero">
+          <div class="hero-container">
+            <h1>Find The Best Job For Your Future</h1>
+            <p>It is a long established fact that a reader will be distracted by the readable.</p>
+            <div class="search-container">
+              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
+              <button class="search-btn">Search</button>
             </div>
-            <div class="no-results">No jobs available at the moment. Check back soon!</div>
           </div>
+        </section>
+        
+        <section class="section">
+          <h2 class="section-title">RECENT JOBS</h2>
+          <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+          <div class="no-results">No jobs available at the moment. Check back soon!</div>
         </section>
       `;
     }
@@ -664,50 +654,34 @@ class CPAJobsApp {
     const categories = Array.from(categoriesSet).map(c => JSON.parse(c)).slice(0, 6);
 
     return `
-      <section class="homepage-hero">
+      <section class="hero">
         <div class="hero-container">
-          <div class="hero-content">
-            <h1 class="hero-title">Find Your Next Opportunity</h1>
-            <p class="hero-subtitle">Discover accounting and finance jobs from top employers. Start your career journey today.</p>
-            
-            <div class="search-box">
-              <form class="search-form" onsubmit="event.preventDefault(); app.navigate('/jobs/')">
-                <div class="search-input-wrapper">
-                  <input type="text" class="search-input" placeholder="Job title or keyword" aria-label="Job title search">
-                </div>
-                <button type="submit" class="search-btn">Find Jobs</button>
-              </form>
-            </div>
-            
-            ${categories.length > 0 ? `
-            <div class="quick-categories">
-              ${categories.map(cat => `
-                <a href="/jobs/category/${cat.slug}" class="quick-category" onclick="event.preventDefault(); app.navigate('/jobs/category/${cat.slug}')">${cat.name}</a>
-              `).join('')}
-            </div>
-            ` : ''}
-          </div>
-        </div>
-      </section>
-      
-      <section class="section featured-jobs">
-        <div class="section-container">
-          <div class="section-header">
-            <h2 class="section-title">Featured Opportunities</h2>
-            <p class="section-subtitle">Browse ${jobCount} open ${jobCount === 1 ? 'position' : 'positions'} from leading companies</p>
-          </div>
+          <h1>Find The Best Job For Your Future</h1>
+          <p>It is a long established fact that a reader will be distracted by the readable.</p>
           
-          <div class="jobs-grid">
-            ${this.state.offers.slice(0, 6).map(offer => this.renderJobCard(offer)).join('')}
+          <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
+            <button class="search-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">Search</button>
           </div>
         </div>
       </section>
       
-      <section class="section cta-section">
-        <div class="section-container">
+      <section class="section jobs-section">
+        <h2 class="section-title">RECENT JOBS</h2>
+        <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+        
+        <div class="jobs-grid">
+          ${this.state.offers.slice(0, 10).map(offer => this.renderJobCard(offer)).join('')}
+        </div>
+        
+        ${jobCount > 10 ? `<button class="view-more-btn" onclick="app.navigate('/jobs/')">View More Jobs</button>` : ''}
+      </section>
+      
+      <section class="cta-section">
+        <div class="cta-content">
           <h2 class="cta-title">Ready to Find Your Dream Job?</h2>
           <p class="cta-text">Browse all ${jobCount} opportunities and take the next step in your career</p>
-          <a href="/jobs/" class="cta-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">View All Jobs</a>
+          <button class="cta-btn" onclick="app.navigate('/jobs/')">View All Jobs</button>
         </div>
       </section>
     `;
@@ -717,34 +691,32 @@ class CPAJobsApp {
     const permalink = this.generateJobPermalink(offer);
     const location = offer.location || [offer.location_city, offer.location_state, offer.location_country].filter(Boolean).join(', ') || 'Location not specified';
     const salary = offer.salary_min || offer.salary_max ? `$${offer.salary_min || offer.salary_max}${offer.salary_period ? '/' + offer.salary_period : ''}` : null;
+    const applyUrl = offer.apply_url;
     
     return `
-      <a href="${permalink}" class="job-card" onclick="event.preventDefault(); app.navigate('${permalink}')">
+      <div class="job-card">
         <div class="job-card-header">
-          <div>
-            <span class="job-company">${offer.company || 'Company'}</span>
-            <h3 class="job-title">${offer.title}</h3>
-          </div>
+          <a href="${permalink}" class="job-title" onclick="event.preventDefault(); app.navigate('${permalink}')">${offer.title}</a>
         </div>
         
         <div class="job-meta">
-          <span class="job-meta-item">📍 ${location}</span>
-          ${offer.employment_type ? `<span class="job-meta-item">📋 ${offer.employment_type}</span>` : ''}
-          ${offer.remote ? `<span class="job-meta-item">🌍 Remote</span>` : ''}
+          <div class="job-meta-item">📍 ${location}</div>
+          ${offer.employment_type ? `<div class="job-meta-item">📋 ${offer.employment_type}</div>` : ''}
+          ${offer.remote ? `<div class="job-meta-item">🌍 Remote</div>` : ''}
         </div>
         
         <div class="job-badges">
           ${offer.category ? `<span class="job-badge">${offer.category.name || 'Job'}</span>` : ''}
-          ${offer.remote ? `<span class="job-badge remote">✓ Remote</span>` : ''}
+          ${offer.remote ? `<span class="job-badge">Remote</span>` : ''}
         </div>
         
-        ${offer.description ? `<p class="job-description">${offer.description.substring(0, 120)}${offer.description.length > 120 ? '...' : ''}</p>` : ''}
+        ${offer.description ? `<p class="job-description">${offer.description.substring(0, 100)}${offer.description.length > 100 ? '...' : ''}</p>` : ''}
         
         <div class="job-footer">
           ${salary ? `<span class="job-salary">${salary}</span>` : '<span></span>'}
-          <span class="job-posted">View details →</span>
+          ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">Apply Now</a>` : '<button class="apply-btn" disabled>Apply</button>'}
         </div>
-      </a>
+      </div>
     `;
   }
 
