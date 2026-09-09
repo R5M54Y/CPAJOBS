@@ -351,7 +351,7 @@ class CPAJobsApp {
   }
 
   updateSeoMetadata() {
-    const canonicalHostname = 'https://usajobs.workers.dev';
+    const canonicalHostname = 'https://usajobs.usajobs.workers.dev';
     let title = 'USA Jobs';
     let description = 'Find accounting and finance job opportunities. Browse high-paying CPA positions from top employers.';
     let canonicalUrl = `${canonicalHostname}/`;
