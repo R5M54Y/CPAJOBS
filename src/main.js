@@ -1533,6 +1533,16 @@ const getCategoryNameFromId = (categoryId) => {
     .join(' ');
 };
 
+// Helper to normalize slug (must match frontend logic)
+const normalizeSlug = (title) => {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 // GET /categories - List categories
 const getCategories = async (env) => {
   try {
