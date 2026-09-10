@@ -11,26 +11,13 @@ d1_databases = [
   { binding = "DB", database_name = "cpajobs-db", database_id = "e05af5a8-824b-493b-a9b0-1ce06ce8566e", migrations_dir = "src/db/migrations" }
 ]
 
-# Cloudflare Workers routes matching the blueprint exactly
-# Phase 1 API endpoints
-# Routes are handled internally by the fetch handler
-# For production deployment with custom domain, add routes here
-# routes = [
-#   "example.com/offers",
-#   "example.com/offers/:id",
-#   "example.com/track/click",
-#   ...
-# ]
-
 # Compatibility date for Cloudflare Workers
 compatibility_date = "2026-09-03"
 
-# Scheduled cron job for Ashby job import
-# Next run: 2026-09-08T17:19 UTC (final test with complete schema)
+# Scheduled cron job for Ashby job import (15:59 UTC daily)
 [triggers]
-crons = ["19 17 * * *"]
+crons = ["59 15 * * *"]
 
-# Ashby Job Board Configuration (set via 'wrangler secret' or environment)
-# ASHBY_JOB_BOARD_NAME - Your organization's Ashby job board identifier
-# Example: "company-name" for https://jobs.ashbyhq.com/company-name
-# No API key required - Ashby Public Job Postings API is public
+# Production environment configuration
+[env.production]
+vars = { ENVIRONMENT = "production", CANONICAL_HOSTNAME = "usajobs.usajobs.workers.dev", ASHBY_JOB_BOARD_NAME = "notion" }

@@ -1,0 +1,21 @@
+{
+  "siteId": "usajobs-accounting",
+  "brand": {
+    "name": "USA Jobs",
+    "title": "USA Jobs | Accounting & Finance Opportunities",
+    "description": "Find accounting and finance job opportunities. Browse high-paying CPA positions from top employers.",
+    "domain": "usajobs.usajobs.workers.dev"
+  },
+  "target": {
+    "location": "United States",
+    "keywords": ["accounting", "finance", "cpa"],
+    "industry": "accounting"
+  },
+  "seo": {
+    "baseUrl": "https://usajobs.usajobs.workers.dev",
+    "locale": "en-US"
+  },
+  "ads": {
+    "enabled": false
+  }
+}

@@ -19,11 +19,11 @@ const ASHBY_SOURCE_NAME = 'Ashby Public Jobs';
 
 /**
  * Import jobs from Ashby Public Job Postings API
- * @param {Object} env - Cloudflare environment with DB binding
+ * @param {Object} config - Configuration with DB binding
  * @param {string} jobBoardName - Ashby job board identifier (e.g., "company-name")
  * @returns {Object} Import statistics
  */
-export async function importAshbyJobs(env, jobBoardName) {
+export async function importAshbyJobs(config, jobBoardName) {
   if (!jobBoardName) {
     throw new Error('Job board name required for Ashby import');
   }
@@ -39,7 +39,7 @@ export async function importAshbyJobs(env, jobBoardName) {
 
   try {
     // Ensure Ashby source exists in database
-    await ensureAshbySource(env);
+    await ensureAshbySource(config);
 
     // Fetch jobs from Ashby public API
     // Note: Ashby public API does not require authentication
@@ -80,11 +80,11 @@ export async function importAshbyJobs(env, jobBoardName) {
     }
 
     // Deactivate Ashby offers no longer in API response
-    const deactivated = await deactivateRemovedJobs(env, activeAshbyIds, jobBoardName);
+    const deactivated = await deactivateRemovedJobs(config, activeAshbyIds, jobBoardName);
     stats.deactivated = deactivated;
 
     // Log import event
-    await logImportEvent(env, jobBoardName, stats);
+    await logImportEvent(config, jobBoardName, stats);
 
   } catch (err) {
     stats.errors.push(`Import failed: ${err.message}`);
@@ -112,13 +112,13 @@ async function fetchAshbyJobs(jobBoardName) {
 /**
  * Ensure Ashby source record exists
  */
-async function ensureAshbySource(env) {
-  const existing = await env.DB.prepare(
+async function ensureAshbySource(config) {
+  const existing = await config.db.prepare(
     'SELECT id FROM offer_sources WHERE id = ?'
   ).bind(ASHBY_SOURCE_ID).first();
 
   if (!existing) {
-    await env.DB.prepare(`
+    await config.db.prepare(`
       INSERT INTO offer_sources (id, name, type, status, created_at, updated_at)
       VALUES (?, ?, 'api', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).bind(ASHBY_SOURCE_ID, ASHBY_SOURCE_NAME).run();
@@ -129,7 +129,7 @@ async function ensureAshbySource(env) {
  * Process single Ashby job
  * @returns {'imported' | 'updated' | 'skipped'}
  */
-async function processJob(env, job, jobBoardName) {
+async function processJob(config, job, jobBoardName) {
   // Validate required fields
   if (!job.id || !job.title) {
     throw new Error('Missing required: id or title');
@@ -139,7 +139,7 @@ async function processJob(env, job, jobBoardName) {
   const externalId = String(job.id);
 
   // Check if job already exists
-  const existing = await env.DB.prepare(
+  const existing = await config.db.prepare(
     'SELECT id, status FROM offers WHERE external_id = ? AND source_id = ?'
   ).bind(externalId, ASHBY_SOURCE_ID).first();
 
@@ -308,7 +308,7 @@ async function processJob(env, job, jobBoardName) {
 
     // Execute update
     bindings.push(existing.id);
-    await env.DB.prepare(`
+    await config.db.prepare(`
       UPDATE offers
       SET ${updates.join(', ')}
       WHERE id = ?
@@ -321,7 +321,7 @@ async function processJob(env, job, jobBoardName) {
   const categoryId = await ensureCategory(env, department || 'General');
   const offerId = `ashby-${externalId}`;
 
-  await env.DB.prepare(`
+  await config.db.prepare(`
     INSERT INTO offers (
       id, external_id, title, description, description_html,
       url, apply_url, payout, payout_type,
@@ -352,14 +352,14 @@ async function processJob(env, job, jobBoardName) {
 /**
  * Ensure category exists
  */
-async function ensureCategory(env, categoryName) {
+async function ensureCategory(config, categoryName) {
   const slug = categoryName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
   const categoryId = `cat-${slug}`;
 
-  const existing = await env.DB.prepare(
+  const existing = await config.db.prepare(
     'SELECT id FROM categories WHERE id = ? OR slug = ?'
   ).bind(categoryId, slug).first();
 
@@ -368,7 +368,7 @@ async function ensureCategory(env, categoryName) {
   }
 
   // Create new category
-  await env.DB.prepare(`
+  await config.db.prepare(`
     INSERT INTO categories (id, name, slug, description, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).bind(
@@ -384,8 +384,8 @@ async function ensureCategory(env, categoryName) {
 /**
  * Deactivate Ashby offers no longer in API response
  */
-async function deactivateRemovedJobs(env, activeIds, jobBoardName) {
-  const activeOffers = await env.DB.prepare(`
+async function deactivateRemovedJobs(config, activeIds, jobBoardName) {
+  const activeOffers = await config.db.prepare(`
     SELECT external_id FROM offers
     WHERE source_id = ? AND status = 'active'
   `).bind(ASHBY_SOURCE_ID).all();
@@ -394,7 +394,7 @@ async function deactivateRemovedJobs(env, activeIds, jobBoardName) {
 
   for (const offer of activeOffers.results || []) {
     if (!activeIds.has(offer.external_id)) {
-      await env.DB.prepare(`
+      await config.db.prepare(`
         UPDATE offers
         SET status = 'expired', updated_at = CURRENT_TIMESTAMP
         WHERE external_id = ? AND source_id = ?
@@ -409,9 +409,9 @@ async function deactivateRemovedJobs(env, activeIds, jobBoardName) {
 /**
  * Log import event
  */
-async function logImportEvent(env, jobBoardName, stats) {
+async function logImportEvent(config, jobBoardName, stats) {
   try {
-    await env.DB.prepare(`
+    await config.db.prepare(`
       INSERT INTO system_events (event_type, event_data, created_at)
       VALUES ('ashby_import', ?, CURRENT_TIMESTAMP)
     `).bind(JSON.stringify({

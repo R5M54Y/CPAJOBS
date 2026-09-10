@@ -8,3 +8,10 @@ node_modules/
 .DS_Store
 dist/
 build/
+
+# Backup and temporary files
+*.bak
+*.old
+*.tmp
+*~
+.*.swp
