@@ -99,44 +99,88 @@ export const serveJobDetail = async (pathname, config, canonicalHostname) => {
       jobPostingJson.employmentType = job.employment_type;
     }
     
-    // jobLocation: Comprehensive location from Ashby raw address or normalized fields
-    const hasLocation = job.location_city || job.location_state || job.location_country;
-    const ashbyAddress = sourceRaw?.address?.postalAddress;
+    // Determine if job is remote, hybrid, or on-site
+    // Use workplace_type as authority, fallback to remote flag
+    const workplaceType = job.workplace_type || sourceRaw?.workplaceType;
+    const isHybrid = workplaceType === 'Hybrid';
+    const isRemote = workplaceType === 'Remote' || (!workplaceType && (job.remote === 1 || sourceRaw?.isRemote === true));
     
-    if (hasLocation || ashbyAddress) {
-      jobPostingJson.jobLocation = {
-        '@type': 'Place',
-        address: {
-          '@type': 'PostalAddress',
-        },
-      };
+    // Remote jobs: Use jobLocationType + applicantLocationRequirements
+    if (isRemote && !isHybrid) {
+      jobPostingJson.jobLocationType = 'TELECOMMUTE';
       
-      if (ashbyAddress) {
-        if (ashbyAddress.addressLocality) {
-          jobPostingJson.jobLocation.address.addressLocality = ashbyAddress.addressLocality;
+      // Add applicant location requirement if geographic restriction exists
+      // Check job.location_country first as most reliable source
+      let countryName = null;
+      
+      if (job.location_country) {
+        // Map known country values to proper names
+        const country = job.location_country;
+        if (country.includes('European Union') || country === 'Europe') {
+          countryName = 'European Union';
+        } else if (country === 'USA' || country === 'US' || country.includes('United States')) {
+          countryName = 'United States';
+        } else {
+          // Use the actual country value as-is
+          countryName = country;
         }
-        if (ashbyAddress.addressRegion) {
-          jobPostingJson.jobLocation.address.addressRegion = ashbyAddress.addressRegion;
-        }
-        if (ashbyAddress.addressCountry) {
-          jobPostingJson.jobLocation.address.addressCountry = ashbyAddress.addressCountry;
-        }
-      } else {
-        if (job.location_city) {
-          jobPostingJson.jobLocation.address.addressLocality = job.location_city;
-        }
-        if (job.location_state) {
-          jobPostingJson.jobLocation.address.addressRegion = job.location_state;
-        }
-        if (job.location_country) {
-          jobPostingJson.jobLocation.address.addressCountry = job.location_country;
+      } else if (sourceRaw?.location) {
+        // Fallback: try to extract country from Ashby location string
+        const ashbyLocation = sourceRaw.location;
+        if (ashbyLocation.includes('European Union') || ashbyLocation.includes('Europe')) {
+          countryName = 'European Union';
+        } else if (ashbyLocation.includes('US') || ashbyLocation.includes('USA') || ashbyLocation.includes('United States')) {
+          countryName = 'United States';
         }
       }
-    }
-    
-    // Remote job handling
-    if (job.remote || sourceRaw?.isRemote === true) {
-      jobPostingJson.jobLocationType = 'TELECOMMUTE';
+      
+      if (countryName) {
+        jobPostingJson.applicantLocationRequirements = {
+          '@type': 'Country',
+          name: countryName,
+        };
+      }
+      // Do NOT add jobLocation for fully remote jobs
+    } else {
+      // On-site or hybrid: Use jobLocation with address
+      const hasLocation = job.location_city || job.location_state || job.location_country;
+      const ashbyAddress = sourceRaw?.address?.postalAddress;
+      
+      if (hasLocation || ashbyAddress) {
+        jobPostingJson.jobLocation = {
+          '@type': 'Place',
+          address: {
+            '@type': 'PostalAddress',
+          },
+        };
+        
+        if (ashbyAddress) {
+          if (ashbyAddress.addressLocality) {
+            jobPostingJson.jobLocation.address.addressLocality = ashbyAddress.addressLocality;
+          }
+          if (ashbyAddress.addressRegion) {
+            jobPostingJson.jobLocation.address.addressRegion = ashbyAddress.addressRegion;
+          }
+          if (ashbyAddress.addressCountry) {
+            jobPostingJson.jobLocation.address.addressCountry = ashbyAddress.addressCountry;
+          }
+        } else {
+          if (job.location_city) {
+            jobPostingJson.jobLocation.address.addressLocality = job.location_city;
+          }
+          if (job.location_state) {
+            jobPostingJson.jobLocation.address.addressRegion = job.location_state;
+          }
+          if (job.location_country) {
+            jobPostingJson.jobLocation.address.addressCountry = job.location_country;
+          }
+        }
+      }
+      
+      // Hybrid jobs: Add jobLocationType if remote component exists
+      if (isHybrid) {
+        jobPostingJson.jobLocationType = 'TELECOMMUTE';
+      }
     }
     
     // baseSalary: Only populate if we have actual salary data
