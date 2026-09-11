@@ -213,11 +213,24 @@ export const verifyApplyUrl = async (request, config) => {
 
       // 404 = expired job (ONLY case where expired: true)
       if (checkResponse.status === 404) {
+        // Delete the expired job from database
+        try {
+          await config.db.prepare(
+            'DELETE FROM offers WHERE id = ?'
+          ).bind(offerId).run();
+          
+          console.log(`Deleted expired job from database: ${offerId} (external 404)`);
+        } catch (deleteError) {
+          // Log but don't fail the response - job may already be deleted (race condition)
+          console.error('Failed to delete expired job:', deleteError.message);
+        }
+        
         return new Response(JSON.stringify({
           available: false,
           expired: true,
           statusCode: 404,
           error: 'Job application page not found',
+          jobDeleted: true,
         }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -233,18 +246,30 @@ export const verifyApplyUrl = async (request, config) => {
           });
           
           if (checkResponse.status === 404) {
+            // Delete the expired job from database
+            try {
+              await config.db.prepare(
+                'DELETE FROM offers WHERE id = ?'
+              ).bind(offerId).run();
+              
+              console.log(`Deleted expired job from database: ${offerId} (external 404 via GET)`);
+            } catch (deleteError) {
+              console.error('Failed to delete expired job:', deleteError.message);
+            }
+            
             return new Response(JSON.stringify({
               available: false,
               expired: true,
               statusCode: 404,
               error: 'Job application page not found',
+              jobDeleted: true,
             }), {
               status: 200,
               headers: { 'Content-Type': 'application/json' },
             });
           }
         } catch (getError) {
-          // GET also failed, network issue
+          // GET also failed, network issue - DO NOT DELETE
           return new Response(JSON.stringify({
             available: false,
             expired: false,
