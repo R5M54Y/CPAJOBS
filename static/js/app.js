@@ -948,8 +948,9 @@ class CPAJobsApp {
       const verifyResponse = await this.apiCall(`/apply?id=${encodeURIComponent(offerId)}&url=${encodeURIComponent(offer.apply_url)}`);
       const verifyResult = await verifyResponse.json();
 
-      if (!verifyResponse.ok || !verifyResult.available) {
-        // Job application URL is not available (404)
+      // ONLY expired: true means job has expired
+      if (verifyResult.expired === true) {
+        // Job application URL returned 404 - show expired state
         this.state.currentView = 'job-expired';
         this.state.expiredJob = {
           id: offerId,
@@ -960,24 +961,39 @@ class CPAJobsApp {
         return false;
       }
 
-      // Track click
-      const clickData = {
-        offer_id: offerId,
-        ip_address: 'unknown',
-        user_agent: navigator.userAgent,
-        referrer: document.referrer,
-        metadata: {
-          source: 'frontend_mvp',
-          timestamp: new Date().toISOString(),
-          apply_url_verified: true
-        }
+      // available: true means we can redirect
+      if (verifyResult.available === true) {
+        // Track click
+        const clickData = {
+          offer_id: offerId,
+          ip_address: 'unknown',
+          user_agent: navigator.userAgent,
+          referrer: document.referrer,
+          metadata: {
+            source: 'frontend_mvp',
+            timestamp: new Date().toISOString(),
+            apply_url_verified: true
+          }
+        };
+
+        await this.trackClick(offerId, clickData);
+
+        // Redirect to verified URL
+        window.location.href = verifyResult.redirectUrl || offer.apply_url;
+        return true;
+      }
+
+      // Otherwise: verification failed but NOT expired (500, 400, network error, etc.)
+      // Show temporary error with retry option
+      this.state.currentView = 'verification-error';
+      this.state.verificationError = {
+        offerId,
+        applyUrl: offer.apply_url,
+        title: offer.title,
+        error: verifyResult.error
       };
-
-      await this.trackClick(offerId, clickData);
-
-      // Redirect to verified URL
-      window.location.href = verifyResult.redirectUrl || offer.apply_url;
-      return true;
+      this.render();
+      return false;
     } catch (error) {
       console.error('Apply verification failed:', error);
       

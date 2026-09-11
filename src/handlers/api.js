@@ -155,6 +155,8 @@ export const verifyApplyUrl = async (request, config) => {
 
     if (!offerId || !applyUrl) {
       return new Response(JSON.stringify({
+        available: false,
+        expired: false,
         error: 'Missing id or url parameter',
       }), {
         status: 400,
@@ -169,8 +171,9 @@ export const verifyApplyUrl = async (request, config) => {
 
     if (!jobResult) {
       return new Response(JSON.stringify({
-        error: 'Job not found',
         available: false,
+        expired: false,
+        error: 'Job not found',
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
@@ -180,8 +183,9 @@ export const verifyApplyUrl = async (request, config) => {
     // Verify that requested URL matches job's apply_url
     if (jobResult.apply_url !== applyUrl) {
       return new Response(JSON.stringify({
-        error: 'Apply URL mismatch',
         available: false,
+        expired: false,
+        error: 'Apply URL mismatch',
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -190,27 +194,74 @@ export const verifyApplyUrl = async (request, config) => {
 
     // Check if apply_url is accessible
     try {
-      const checkResponse = await fetch(applyUrl, {
-        method: 'HEAD',
-        redirect: 'follow',
-      });
+      let checkResponse;
+      
+      // Try HEAD first
+      try {
+        checkResponse = await fetch(applyUrl, {
+          method: 'HEAD',
+          redirect: 'follow',
+        });
+      } catch (headError) {
+        // HEAD failed, fallback to GET
+        console.log('HEAD request failed, falling back to GET:', headError.message);
+        checkResponse = await fetch(applyUrl, {
+          method: 'GET',
+          redirect: 'follow',
+        });
+      }
 
-      // 404 = expired job
+      // 404 = expired job (ONLY case where expired: true)
       if (checkResponse.status === 404) {
         return new Response(JSON.stringify({
-          error: 'Job application page not found',
           available: false,
+          expired: true,
           statusCode: 404,
+          error: 'Job application page not found',
         }), {
-          status: 404,
+          status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
+      }
+
+      // 405 Method Not Allowed for HEAD - try GET
+      if (checkResponse.status === 405 && checkResponse.url === applyUrl) {
+        try {
+          checkResponse = await fetch(applyUrl, {
+            method: 'GET',
+            redirect: 'follow',
+          });
+          
+          if (checkResponse.status === 404) {
+            return new Response(JSON.stringify({
+              available: false,
+              expired: true,
+              statusCode: 404,
+              error: 'Job application page not found',
+            }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        } catch (getError) {
+          // GET also failed, network issue
+          return new Response(JSON.stringify({
+            available: false,
+            expired: false,
+            error: 'Could not verify URL availability',
+            note: 'Network error during verification',
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
       }
 
       // 200-299 = success
       if (checkResponse.status >= 200 && checkResponse.status < 300) {
         return new Response(JSON.stringify({
           available: true,
+          expired: false,
           statusCode: checkResponse.status,
           redirectUrl: checkResponse.url || applyUrl,
         }), {
@@ -219,13 +270,13 @@ export const verifyApplyUrl = async (request, config) => {
         });
       }
 
-      // 3xx = redirect (follow and report final URL)
+      // 3xx = redirect already followed, check final status
       if (checkResponse.status >= 300 && checkResponse.status < 400) {
         return new Response(JSON.stringify({
           available: true,
+          expired: false,
           statusCode: checkResponse.status,
           redirectUrl: checkResponse.url || applyUrl,
-          redirect: true,
         }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -236,6 +287,7 @@ export const verifyApplyUrl = async (request, config) => {
       if (checkResponse.status === 401 || checkResponse.status === 403) {
         return new Response(JSON.stringify({
           available: true,
+          expired: false,
           statusCode: checkResponse.status,
           redirectUrl: applyUrl,
           note: 'Authentication/permission required but URL appears valid',
@@ -249,6 +301,7 @@ export const verifyApplyUrl = async (request, config) => {
       if (checkResponse.status === 429) {
         return new Response(JSON.stringify({
           available: true,
+          expired: false,
           statusCode: checkResponse.status,
           redirectUrl: applyUrl,
           note: 'Rate limited but URL appears valid',
@@ -261,10 +314,11 @@ export const verifyApplyUrl = async (request, config) => {
       // Other 5xx = temporary failure, don't classify as expired
       if (checkResponse.status >= 500) {
         return new Response(JSON.stringify({
-          available: true,
+          available: false,
+          expired: false,
           statusCode: checkResponse.status,
-          redirectUrl: applyUrl,
-          note: 'Server error but URL may be temporarily unavailable',
+          error: 'Server error at application page',
+          note: 'Temporary server error, not expired',
         }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -274,6 +328,7 @@ export const verifyApplyUrl = async (request, config) => {
       // Other status codes
       return new Response(JSON.stringify({
         available: true,
+        expired: false,
         statusCode: checkResponse.status,
         redirectUrl: applyUrl,
       }), {
@@ -284,18 +339,20 @@ export const verifyApplyUrl = async (request, config) => {
       // Network error, DNS failure, timeout - don't classify as expired
       console.error('Network error during apply URL check:', fetchError.message);
       return new Response(JSON.stringify({
-        available: true,
-        redirectUrl: applyUrl,
+        available: false,
+        expired: false,
         error: 'Could not verify URL availability',
-        note: 'Network error but allowing redirect to proceed',
+        note: 'Network error during verification',
       }), {
-        status: 200,
+        status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
   } catch (error) {
     console.error('Apply verification error:', error);
     return new Response(JSON.stringify({
+      available: false,
+      expired: false,
       error: 'Verification failed',
     }), {
       status: 500,
