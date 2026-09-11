@@ -42,6 +42,88 @@ export const serveJobDetail = async (pathname, config, canonicalHostname) => {
       return new Response('Job listing no longer available', { status: 410 });
     }
     
+    // CRITICAL: Verify apply_url is still available before rendering Job Detail
+    // If external URL returns 404, delete the job and return our 404
+    if (job.apply_url) {
+      try {
+        let verifyResponse;
+        
+        // Try HEAD first (lightweight)
+        try {
+          verifyResponse = await fetch(job.apply_url, {
+            method: 'HEAD',
+            redirect: 'follow',
+          });
+        } catch (headError) {
+          // HEAD failed, fallback to GET
+          console.log(`[JOB_DETAIL] HEAD failed for ${job.id}, trying GET:`, headError.message);
+          try {
+            verifyResponse = await fetch(job.apply_url, {
+              method: 'GET',
+              redirect: 'follow',
+            });
+          } catch (getError) {
+            // Network error - preserve job, render normally
+            console.log(`[JOB_DETAIL] Network error verifying ${job.id}:`, getError.message);
+            verifyResponse = null;
+          }
+        }
+        
+        // External 404 = expired job, DELETE and return 404
+        if (verifyResponse && verifyResponse.status === 404) {
+          console.log(`[JOB_DETAIL] External 404 for job ${job.id}, deleting from database`);
+          
+          try {
+            await config.db.prepare(
+              'DELETE FROM offers WHERE id = ?'
+            ).bind(job.id).run();
+            
+            console.log(`[JOB_DETAIL] ✅ Deleted expired job: ${job.id}`);
+          } catch (deleteError) {
+            console.error(`[JOB_DETAIL] Failed to delete job ${job.id}:`, deleteError.message);
+          }
+          
+          // Return our 404 page (job expired)
+          return new Response('Job listing no longer available', { status: 404 });
+        }
+        
+        // 405 Method Not Allowed - try GET
+        if (verifyResponse && verifyResponse.status === 405) {
+          try {
+            verifyResponse = await fetch(job.apply_url, {
+              method: 'GET',
+              redirect: 'follow',
+            });
+            
+            if (verifyResponse.status === 404) {
+              console.log(`[JOB_DETAIL] External 404 (via GET) for job ${job.id}, deleting from database`);
+              
+              try {
+                await config.db.prepare(
+                  'DELETE FROM offers WHERE id = ?'
+                ).bind(job.id).run();
+                
+                console.log(`[JOB_DETAIL] ✅ Deleted expired job: ${job.id}`);
+              } catch (deleteError) {
+                console.error(`[JOB_DETAIL] Failed to delete job ${job.id}:`, deleteError.message);
+              }
+              
+              return new Response('Job listing no longer available', { status: 404 });
+            }
+          } catch (getError) {
+            console.log(`[JOB_DETAIL] GET also failed for ${job.id}, preserving job (network error)`);
+          }
+        }
+        
+        // All other statuses (200, 3xx, 401, 403, 429, 5xx, etc.) = preserve job, render normally
+        console.log(`[JOB_DETAIL] Job ${job.id} verified (status: ${verifyResponse?.status || 'network_error'}), rendering normally`);
+        
+      } catch (verifyError) {
+        // Any uncaught error during verification = preserve job, render normally
+        console.error(`[JOB_DETAIL] Unexpected error verifying ${job.id}:`, verifyError.message);
+      }
+    }
+    
     // Build SEO-optimized job detail page
     const title = `${job.title} | USA Jobs`;
     const description = (job.description || '').substring(0, 160);
