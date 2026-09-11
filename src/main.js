@@ -11,6 +11,7 @@ import { generateSitemap, serveRobotsTxt } from './handlers/seo.js';
 import { serveStatic } from './handlers/static.js';
 import { serveJobDetail, serveCategoryPage } from './handlers/pages.js';
 import { handleLogoAdminRequest } from './handlers/admin-logo.js';
+import { cleanupExpiredJobs } from './handlers/cleanup.js';
 
 /**
  * Main fetch handler
@@ -112,9 +113,21 @@ export default {
   },
   
   /**
-   * Scheduled job handler - daily job import
+   * Scheduled job handler - daily job import + hourly cleanup
    */
   async scheduled(event, env) {
+    const config = getConfig(env);
+    
+    // Run expired job cleanup every hour
+    console.log('[CRON] Starting expired job cleanup at', new Date().toISOString());
+    try {
+      const cleanupStats = await cleanupExpiredJobs(config, 50);
+      console.log('[CRON] Cleanup completed:', cleanupStats);
+    } catch (cleanupError) {
+      console.error('[CRON] Cleanup failed:', cleanupError.message);
+    }
+    
+    // Run job import once daily (15:59 UTC)
     console.log('[CRON] Multi-board import job started at', new Date().toISOString());
     
     try {
