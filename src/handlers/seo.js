@@ -34,16 +34,16 @@ export const generateSitemap = async (config, canonicalHostname) => {
     
     // Category landing pages
     const categoriesResult = await config.db.prepare(
-      'SELECT DISTINCT category FROM offers WHERE status = "active"'
+      'SELECT DISTINCT category_id FROM offers WHERE status = "active"'
     ).all();
     
     const categories = categoriesResult.results || [];
     for (const catRow of categories) {
-      if (catRow.category) {
-        const categorySlug = normalizeCategorySlug(catRow.category);
+      if (catRow.category_id) {
+        const categorySlug = normalizeCategorySlug(catRow.category_id);
         const countResult = await config.db.prepare(
-          'SELECT COUNT(*) as count FROM offers WHERE status = "active" AND category = ?'
-        ).bind(catRow.category).first();
+          'SELECT COUNT(*) as count FROM offers WHERE status = "active" AND category_id = ?'
+        ).bind(catRow.category_id).first();
         
         if (countResult && countResult.count > 0) {
           xml += '  <url>\n';

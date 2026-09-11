@@ -11,7 +11,10 @@ class CPAJobsApp {
       error: null,
       selectedOffer: null,
       trackingData: null,
-      routeParams: {}
+      routeParams: {},
+      paginationTotal: 0,
+      currentPage: 1,
+      pageSize: 20
     };
     this.baseUrl = '';
     this.init();
@@ -52,9 +55,9 @@ class CPAJobsApp {
     }
     
     if (pathname === '/jobs' || pathname === '/jobs/') {
-      this.state.currentView = 'landing';
+      this.state.currentView = 'categories';
       this.state.routeParams = {};
-      await this.loadLanding();
+      await this.loadCategories();
       this.render();
       return;
     }
@@ -148,6 +151,7 @@ class CPAJobsApp {
       if (response.ok) {
         const data = await response.json();
         this.state.offers = data.offers || [];
+        this.state.paginationTotal = data.pagination?.total || 0;
       }
 
       const categoriesResponse = await this.apiCall('/categories');
@@ -175,10 +179,15 @@ class CPAJobsApp {
         this.state.categories = data.categories || [];
       }
 
-      const offersResponse = await this.apiCall('/offers', { status: 'active', limit: 20 });
+      const page = parseInt(this.state.routeParams.page) || 1;
+      const limit = 20;
+      const offersResponse = await this.apiCall('/offers', { status: 'active', limit, page });
       if (offersResponse.ok) {
         const data = await offersResponse.json();
         this.state.offers = data.offers || [];
+        this.state.paginationTotal = data.pagination?.total || 0;
+        this.state.currentPage = page;
+        this.state.pageSize = limit;
       }
 
     } catch (error) {
@@ -360,7 +369,6 @@ class CPAJobsApp {
     let ogType = 'website';
     let twitterTitle = ogTitle;
     let twitterDescription = description;
-    let jobPostingJson = null;
 
     if (this.state.currentView === 'offer-detail') {
       if (this.state.selectedOffer) {
@@ -373,7 +381,6 @@ class CPAJobsApp {
         ogDescription = description;
         twitterTitle = job.title;
         twitterDescription = description;
-        jobPostingJson = this.generateJobPostingJson(job, canonicalUrl);
       } else if (this.state.error) {
         title = 'Job Not Found | USA Jobs';
         description = 'The job you are looking for could not be found.';
@@ -404,7 +411,6 @@ class CPAJobsApp {
     this.updateMetaTag('twitter:card', 'summary', 'name');
     this.updateMetaTag('twitter:title', twitterTitle, 'name');
     this.updateMetaTag('twitter:description', twitterDescription, 'name');
-    this.updateJobPostingJsonLd(jobPostingJson);
   }
 
   generateMetaDescription(job) {
@@ -448,67 +454,7 @@ class CPAJobsApp {
     return desc;
   }
 
-  generateJobPostingJson(job, canonicalUrl) {
-    const posting = {
-      '@context': 'https://schema.org',
-      '@type': 'JobPosting',
-      title: job.title,
-      url: canonicalUrl
-    };
 
-    if (job.description) {
-      const plainText = job.description.replace(/<[^>]*>/g, '').trim();
-      if (plainText) {
-        posting.description = plainText.substring(0, 1000);
-      }
-    }
-
-    if (job.created_at) {
-      posting.datePosted = job.created_at;
-    }
-
-    if (job.company) {
-      posting.hiringOrganization = {
-        '@type': 'Organization',
-        name: job.company
-      };
-      if (job.company_domain) {
-        posting.hiringOrganization.url = 'https://' + (job.company_domain.startsWith('http') ? job.company_domain.replace('https://', '').replace('http://', '') : job.company_domain);
-      }
-    }
-
-    if (job.location_city || job.location_state || job.location_country) {
-      posting.jobLocation = {
-        '@type': 'Place',
-        address: {
-          '@type': 'PostalAddress'
-        }
-      };
-      if (job.location_city) posting.jobLocation.address.addressLocality = job.location_city;
-      if (job.location_state) posting.jobLocation.address.addressRegion = job.location_state;
-      if (job.location_country) posting.jobLocation.address.addressCountry = job.location_country;
-    }
-
-    if (job.employment_type) {
-      posting.employmentType = job.employment_type;
-    }
-
-    if (job.salary_min || job.salary_max) {
-      posting.baseSalary = {
-        '@type': 'PriceSpecification',
-        priceCurrency: job.salary_currency || 'USD',
-        price: job.salary_min || job.salary_max
-      };
-      if (job.salary_max && job.salary_min !== job.salary_max) {
-        posting.baseSalary.maxPrice = job.salary_max;
-      }
-      if (job.salary_period) {
-        posting.baseSalary.validThrough = job.salary_period;
-      }
-    }
-
-    return posting;
-  }
 
   updateMetaTag(name, content, type = 'name') {
     if (!content) return;
@@ -540,23 +486,9 @@ class CPAJobsApp {
     }
   }
 
-  updateJobPostingJsonLd(jobPostingJson) {
-    const existing = document.querySelector('script[data-seo="jobposting"]');
-    if (existing) {
-      existing.remove();
-    }
-
-    if (jobPostingJson) {
-      const script = document.createElement('script');
-      script.type = 'application/ld+json';
-      script.setAttribute('data-seo', 'jobposting');
-      script.textContent = JSON.stringify(jobPostingJson);
-      document.head.appendChild(script);
-    }
-  }
-
   renderLanding() {
     const jobCount = this.state.offers?.length || 0;
+    const totalJobs = this.state.paginationTotal || jobCount;
     
     if (this.state.loading) {
       return `
@@ -620,19 +552,6 @@ class CPAJobsApp {
           </div>
         </section>
         
-    if (jobCount === 0) {
-      return `
-        <section class="hero">
-          <div class="hero-container">
-            <h1>Find The Best Job For Your Future</h1>
-            <p>It is a long established fact that a reader will be distracted by the readable.</p>
-            <div class="search-container">
-              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
-              <button class="search-btn">Search</button>
-            </div>
-          </div>
-        </section>
-        
         <section class="section">
           <h2 class="section-title">RECENT JOBS</h2>
           <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
@@ -680,7 +599,7 @@ class CPAJobsApp {
       <section class="cta-section">
         <div class="cta-content">
           <h2 class="cta-title">Ready to Find Your Dream Job?</h2>
-          <p class="cta-text">Browse all ${jobCount} opportunities and take the next step in your career</p>
+          <p class="cta-text">Browse all ${totalJobs} opportunities and take the next step in your career</p>
           <button class="cta-btn" onclick="app.navigate('/jobs/')">View All Jobs</button>
         </div>
       </section>
@@ -720,26 +639,49 @@ class CPAJobsApp {
     `;
   }
 
+  formatCategoryName(categoryId) {
+    if (!categoryId) return '';
+    return categoryId
+      .replace(/^cat-/, '')
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
   renderCategories() {
     const filteredOffers = this.state.selectedCategory
-      ? this.state.offers.filter(offer => offer.category?.slug === this.state.selectedCategory)
+      ? this.state.offers.filter(offer => offer.category_id === this.state.selectedCategory)
       : this.state.offers;
 
     const resultCount = filteredOffers.length;
-    const categoryName = this.state.selectedCategory 
-      ? this.state.categories.find(c => c.slug === this.state.selectedCategory)?.name || 'Category'
-      : 'All';
+    const totalCount = this.state.paginationTotal || resultCount;
+    const currentPage = this.state.currentPage || 1;
+    const pageSize = this.state.pageSize || 20;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const paginationHTML = totalPages > 1 ? `
+      <div class="pagination">
+        <div class="pagination-info">
+          Page ${currentPage} of ${totalPages} (${totalCount} total jobs)
+        </div>
+        <div class="pagination-controls">
+          ${currentPage > 1 ? `<button class="pagination-btn" onclick="app.goToPage(${currentPage - 1})">← Previous</button>` : ''}
+          ${currentPage < totalPages ? `<button class="pagination-btn" onclick="app.goToPage(${currentPage + 1})">Next →</button>` : ''}
+        </div>
+      </div>
+    ` : '';
 
     return `
       <div class="categories-container">
-        <h2>${categoryName} Jobs ${resultCount > 0 ? `(${resultCount})` : ''}</h2>
+        <h2>${totalCount} Jobs</h2>
+        <p class="listing-subtitle">Find your next opportunity in accounting & finance</p>
         <div class="category-filters">
           <button class="category-filter ${!this.state.selectedCategory ? 'active' : ''}" onclick="app.setSelectedCategory(null)">
             All Jobs
           </button>
           ${this.state.categories.map(cat => `
-            <button class="category-filter ${this.state.selectedCategory === cat.slug ? 'active' : ''}" onclick="app.setSelectedCategory('${cat.slug}')">
-              ${cat.name}
+            <button class="category-filter ${this.state.selectedCategory === cat.category_id ? 'active' : ''}" onclick="app.setSelectedCategory('${cat.category_id}')">
+              ${this.formatCategoryName(cat.category_id)}
             </button>
           `).join('')}
         </div>
@@ -748,6 +690,7 @@ class CPAJobsApp {
         <div class="offer-grid">
           ${filteredOffers.map(offer => this.renderOfferCard(offer)).join('')}
         </div>
+        ${paginationHTML}
         ` : `
         <div class="no-results">
           <p>No jobs available in this category.</p>
@@ -776,29 +719,46 @@ class CPAJobsApp {
     const job = this.state.selectedOffer;
     const applyUrl = job.apply_url;
     const location = job.location || [job.location_city, job.location_state, job.location_country].filter(Boolean).join(', ');
+    
+    const hasSalary = job.salary_min || job.salary_max;
+    let salaryText = '';
+    if (hasSalary) {
+      const currency = job.salary_currency || 'USD';
+      const symbol = currency === 'USD' ? '$' : currency;
+      const min = job.salary_min ? `${symbol}${(job.salary_min / 1000).toFixed(0)}k` : '';
+      const max = job.salary_max ? `${symbol}${(job.salary_max / 1000).toFixed(0)}k` : '';
+      salaryText = (min && max) ? `${min} – ${max}` : (min || max);
+      salaryText += job.salary_period ? ` / ${job.salary_period}` : ' / year';
+    }
+
+    const hasDescriptionHtml = job.description_html && job.description_html.trim().length > 0;
     const hasDescription = job.description && job.description.trim().length > 0;
     const hasResponsibilities = job.responsibilities && job.responsibilities.trim().length > 0;
-    const hasRequirements = job.qualifications || job.requirements;
-    const hasBenefits = job.benefits && (Array.isArray(job.benefits) ? job.benefits.length > 0 : true);
+    const hasRequirements = job.requirements && job.requirements.trim().length > 0;
+    const hasQualifications = job.qualifications && job.qualifications.trim().length > 0;
+    const hasBenefits = job.benefits && (Array.isArray(job.benefits) ? job.benefits.length > 0 : typeof job.benefits === 'string' && job.benefits.trim().length > 0);
+    const hasEducation = job.education && job.education.trim().length > 0;
+    const hasSkills = job.skills && job.skills.trim().length > 0;
+    const hasExperience = job.experience && job.experience.trim().length > 0;
+    const hasDatePosted = job.date_posted || job.created_at;
+    const categoryName = job.category_id ? job.category_id.replace('cat-', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '';
     
     return `
       <div class="job-detail-page">
         <div class="job-detail-container">
           
-          <!-- Breadcrumb -->
           <div class="job-breadcrumb">
             <a href="/" onclick="event.preventDefault(); app.navigate('/')">Jobs</a>
-            ${job.category ? `<span>/</span><span>${job.category.name}</span>` : ''}
+            ${categoryName ? `<span>/</span><span>${categoryName}</span>` : ''}
             <span>/</span><span>${job.title}</span>
           </div>
 
-          <!-- Job Header -->
           <div class="job-header">
             <div class="job-header-main">
               <div class="job-header-content">
                 <h1 class="job-title">${job.title}</h1>
                 <div class="job-company-info">
-                  <span class="job-company">${job.company || 'Company'}</span>
+                  ${job.company ? `<span class="job-company">${job.company}</span>` : ''}
                   ${location ? `<span class="job-location">📍 ${location}</span>` : ''}
                 </div>
               </div>
@@ -806,105 +766,34 @@ class CPAJobsApp {
             
             <div class="job-header-meta">
               ${job.employment_type ? `<span class="job-meta-badge">📋 ${job.employment_type}</span>` : ''}
-              ${job.remote ? `<span class="job-meta-badge remote">🌍 Remote</span>` : ''}
-              ${job.category ? `<span class="job-meta-badge category">${job.category.name}</span>` : ''}
+              ${job.remote ? `<span class="job-meta-badge remote">🌍 ${job.workplace_type || 'Remote'}</span>` : ''}
+              ${categoryName ? `<span class="job-meta-badge category">${categoryName}</span>` : ''}
             </div>
           </div>
 
-          <!-- Main Content Layout -->
           <div class="job-content-grid">
             
-            <!-- Main Content -->
-            <main class="job-main-content">
-              ${hasDescription ? `
-              <section class="job-section">
-                <h2>Job Description</h2>
-                <div class="job-description-text">
-                  ${job.description}
-                </div>
-              </section>
-              ` : ''}
-
-              ${hasResponsibilities ? `
-              <section class="job-section">
-                <h2>Responsibilities</h2>
-                <div class="job-description-text">
-                  ${job.responsibilities}
-                </div>
-              </section>
-              ` : ''}
-
-              ${hasRequirements ? `
-              <section class="job-section">
-                <h2>Requirements</h2>
-                <div class="job-description-text">
-                  ${job.qualifications || job.requirements}
-                </div>
-              </section>
-              ` : ''}
-
-              ${hasBenefits ? `
-              <section class="job-section">
-                <h2>Benefits</h2>
-                <div class="job-description-text">
-                  ${Array.isArray(job.benefits) ? '<ul>' + job.benefits.map(b => `<li>${b}</li>`).join('') + '</ul>' : job.benefits}
-                </div>
-              </section>
-              ` : ''}
-            </main>
-
-            <!-- Sidebar -->
             <aside class="job-sidebar">
               
-              <!-- Quick Info Card -->
-              <div class="sidebar-card">
-                <h3 class="sidebar-card-title">Job Details</h3>
-                <div class="sidebar-info-group">
-                  ${job.employment_type ? `
-                  <div class="sidebar-info-item">
-                    <span class="sidebar-label">Employment Type</span>
-                    <span class="sidebar-value">${job.employment_type}</span>
-                  </div>
-                  ` : ''}
-                  
-                  ${location ? `
-                  <div class="sidebar-info-item">
-                    <span class="sidebar-label">Location</span>
-                    <span class="sidebar-value">${location}</span>
-                  </div>
-                  ` : ''}
-                  
-                  ${job.remote !== undefined ? `
-                  <div class="sidebar-info-item">
-                    <span class="sidebar-label">Remote</span>
-                    <span class="sidebar-value">${job.remote ? '✓ Yes' : 'On-site'}</span>
-                  </div>
-                  ` : ''}
-                  
-                  ${job.category ? `
-                  <div class="sidebar-info-item">
-                    <span class="sidebar-label">Category</span>
-                    <span class="sidebar-value">${job.category.name}</span>
-                  </div>
-                  ` : ''}
-                </div>
-              </div>
-
-              <!-- Apply Card -->
               <div class="sidebar-card apply-card">
-                ${applyUrl ? `
-                <a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-button" onclick="app.handleOfferClick('${job.id}')">
-                  Apply for this Position
-                </a>
-                ` : `
-                <button class="apply-button" disabled style="opacity: 0.5; cursor: not-allowed;">
-                  Application Link Not Available
-                </button>
-                `}
+                ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-button" onclick="app.handleOfferClick('${job.id}')">Apply for this Position</a>` : `<button class="apply-button" disabled style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>`}
                 <p class="apply-note">You will be redirected to the application page.</p>
               </div>
 
-              <!-- Share Card -->
+              ${hasSalary ? `<div class="salary-section"><div class="salary-label">Compensation</div><div class="salary-amount">${salaryText}</div></div>` : ''}
+              
+              <div class="sidebar-card">
+                <h3 class="sidebar-card-title">Job Overview</h3>
+                <div class="sidebar-info-group">
+                  ${job.employment_type ? `<div class="sidebar-info-item"><span class="sidebar-label">Employment Type</span><span class="sidebar-value">${job.employment_type}</span></div>` : ''}
+                  ${location ? `<div class="sidebar-info-item"><span class="sidebar-label">Location</span><span class="sidebar-value">${location}</span></div>` : ''}
+                  ${job.remote !== undefined && job.remote !== null ? `<div class="sidebar-info-item"><span class="sidebar-label">Work Mode</span><span class="sidebar-value">${job.workplace_type || (job.remote ? 'Remote' : 'On-site')}</span></div>` : ''}
+                  ${categoryName ? `<div class="sidebar-info-item"><span class="sidebar-label">Category</span><span class="sidebar-value">${categoryName}</span></div>` : ''}
+                  ${hasExperience ? `<div class="sidebar-info-item"><span class="sidebar-label">Experience</span><span class="sidebar-value">${job.experience}</span></div>` : ''}
+                  ${hasDatePosted ? `<div class="sidebar-info-item"><span class="sidebar-label">Posted</span><span class="sidebar-value">${new Date(job.date_posted || job.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>` : ''}
+                </div>
+              </div>
+
               <div class="sidebar-card">
                 <h3 class="sidebar-card-title">Share</h3>
                 <div class="share-buttons">
@@ -914,6 +803,15 @@ class CPAJobsApp {
               </div>
 
             </aside>
+            
+            <main class="job-main-content">
+              ${hasDescriptionHtml ? `<section class="job-section"><h2>About the Role</h2><div class="job-description-text">${job.description_html}</div></section>` : hasDescription ? `<section class="job-section"><h2>About the Role</h2><div class="job-description-text">${job.description.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
+              ${hasResponsibilities ? `<section class="job-section"><h2>Responsibilities</h2><div class="job-description-text">${job.responsibilities.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
+              ${hasQualifications ? `<section class="job-section"><h2>Qualifications</h2><div class="job-description-text">${job.qualifications.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : hasRequirements ? `<section class="job-section"><h2>Requirements</h2><div class="job-description-text">${job.requirements.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
+              ${hasSkills ? `<section class="job-section"><h2>Skills</h2><div class="job-description-text">${job.skills.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
+              ${hasEducation ? `<section class="job-section"><h2>Education</h2><div class="job-description-text">${job.education.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
+              ${hasBenefits ? `<section class="job-section"><h2>Benefits & Perks</h2><div class="job-description-text">${Array.isArray(job.benefits) ? '<ul>' + job.benefits.map(b => `<li>${b}</li>`).join('') + '</ul>' : job.benefits.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
+            </main>
 
           </div>
 
@@ -946,29 +844,26 @@ class CPAJobsApp {
     const location = offer.location || [offer.location_city, offer.location_state, offer.location_country].filter(Boolean).join(', ') || 'Location not specified';
     const salary = offer.salary_min || offer.salary_max ? `$${offer.salary_min || offer.salary_max}${offer.salary_period ? '/' + offer.salary_period : ''}` : null;
     const applyUrl = offer.apply_url;
+    const company = offer.company || 'Company';
     
     return `
       <div class="job-card">
         <div class="job-card-header">
           <a href="${permalink}" class="job-title" onclick="event.preventDefault(); app.navigate('${permalink}')">${offer.title}</a>
+          <p class="job-company">${company}</p>
         </div>
         
         <div class="job-meta">
           <div class="job-meta-item">📍 ${location}</div>
-          ${offer.employment_type ? `<div class="job-meta-item">📋 ${offer.employment_type}</div>` : ''}
-          ${offer.remote ? `<div class="job-meta-item">🌍 Remote</div>` : ''}
+          ${offer.employment_type ? `<div class="job-meta-item">·</div><div class="job-meta-item">${offer.employment_type}</div>` : ''}
+          ${offer.remote ? `<div class="job-meta-item">·</div><div class="job-meta-item">🌍 Remote</div>` : ''}
         </div>
         
-        <div class="job-badges">
-          ${offer.category ? `<span class="job-badge">${offer.category.name || 'Job'}</span>` : ''}
-          ${offer.remote ? `<span class="job-badge">Remote</span>` : ''}
-        </div>
-        
-        ${offer.description ? `<p class="job-description">${offer.description.substring(0, 100)}${offer.description.length > 100 ? '...' : ''}</p>` : ''}
+        ${offer.description ? `<p class="job-description">${offer.description.substring(0, 120)}${offer.description.length > 120 ? '...' : ''}</p>` : ''}
         
         <div class="job-footer">
           ${salary ? `<span class="job-salary">${salary}</span>` : '<span></span>'}
-          ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">Apply Now</a>` : '<button class="apply-btn" disabled>Apply</button>'}
+          ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">View Job →</a>` : '<button class="apply-btn" disabled>View Job</button>'}
         </div>
       </div>
     `;
@@ -976,6 +871,14 @@ class CPAJobsApp {
 
   setSelectedCategory(category) {
     this.state.selectedCategory = category;
+    this.state.currentPage = 1;
+    this.render();
+  }
+
+  async goToPage(pageNum) {
+    this.state.currentPage = pageNum;
+    this.state.routeParams.page = pageNum;
+    await this.loadCategories();
     this.render();
   }
 

@@ -20,4 +20,4 @@ crons = ["59 15 * * *"]
 
 # Production environment configuration
 [env.production]
-vars = { ENVIRONMENT = "production", CANONICAL_HOSTNAME = "usajobs.usajobs.workers.dev", ASHBY_JOB_BOARD_NAME = "notion" }
+vars = { ENVIRONMENT = "production", CANONICAL_HOSTNAME = "usajobs.usajobs.workers.dev" }

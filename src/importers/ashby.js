@@ -13,20 +13,25 @@
    - Support configurable job board identifiers
 */
 
+import { extractCompanyLogo } from './company-logo.js';
+
 const ASHBY_API_BASE = 'https://api.ashbyhq.com/posting-api/job-board';
-const ASHBY_SOURCE_ID = 'ashby';
-const ASHBY_SOURCE_NAME = 'Ashby Public Jobs';
 
 /**
  * Import jobs from Ashby Public Job Postings API
  * @param {Object} config - Configuration with DB binding
  * @param {string} jobBoardName - Ashby job board identifier (e.g., "company-name")
+ * @param {string} sourceId - Optional source_id for database (defaults to 'ashby' for backward compat)
  * @returns {Object} Import statistics
  */
-export async function importAshbyJobs(config, jobBoardName) {
+export async function importAshbyJobs(config, jobBoardName, sourceId = null) {
   if (!jobBoardName) {
     throw new Error('Job board name required for Ashby import');
   }
+
+  // Use provided sourceId or fall back to 'ashby' for backward compatibility
+  const ASHBY_SOURCE_ID = sourceId || 'ashby';
+  const ASHBY_SOURCE_NAME = 'Ashby Public Jobs';
 
   const stats = {
     fetched: 0,
@@ -39,7 +44,7 @@ export async function importAshbyJobs(config, jobBoardName) {
 
   try {
     // Ensure Ashby source exists in database
-    await ensureAshbySource(config);
+    await ensureAshbySource(config, ASHBY_SOURCE_ID);
 
     // Fetch jobs from Ashby public API
     // Note: Ashby public API does not require authentication
@@ -63,7 +68,7 @@ export async function importAshbyJobs(config, jobBoardName) {
     // Process each job
     for (const job of apiData.jobs) {
       try {
-        const result = await processJob(env, job, jobBoardName);
+        const result = await processJob(config, job, jobBoardName, ASHBY_SOURCE_ID);
         activeAshbyIds.add(job.id);
 
         if (result === 'imported') {
@@ -80,7 +85,7 @@ export async function importAshbyJobs(config, jobBoardName) {
     }
 
     // Deactivate Ashby offers no longer in API response
-    const deactivated = await deactivateRemovedJobs(config, activeAshbyIds, jobBoardName);
+    const deactivated = await deactivateRemovedJobs(config, activeAshbyIds, ASHBY_SOURCE_ID);
     stats.deactivated = deactivated;
 
     // Log import event
@@ -112,16 +117,16 @@ async function fetchAshbyJobs(jobBoardName) {
 /**
  * Ensure Ashby source record exists
  */
-async function ensureAshbySource(config) {
+async function ensureAshbySource(config, sourceId) {
   const existing = await config.db.prepare(
     'SELECT id FROM offer_sources WHERE id = ?'
-  ).bind(ASHBY_SOURCE_ID).first();
+  ).bind(sourceId).first();
 
   if (!existing) {
     await config.db.prepare(`
       INSERT INTO offer_sources (id, name, type, status, created_at, updated_at)
       VALUES (?, ?, 'api', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).bind(ASHBY_SOURCE_ID, ASHBY_SOURCE_NAME).run();
+    `).bind(sourceId, 'Ashby Public Jobs').run();
   }
 }
 
@@ -129,7 +134,7 @@ async function ensureAshbySource(config) {
  * Process single Ashby job
  * @returns {'imported' | 'updated' | 'skipped'}
  */
-async function processJob(config, job, jobBoardName) {
+async function processJob(config, job, jobBoardName, sourceId) {
   // Validate required fields
   if (!job.id || !job.title) {
     throw new Error('Missing required: id or title');
@@ -141,7 +146,7 @@ async function processJob(config, job, jobBoardName) {
   // Check if job already exists
   const existing = await config.db.prepare(
     'SELECT id, status FROM offers WHERE external_id = ? AND source_id = ?'
-  ).bind(externalId, ASHBY_SOURCE_ID).first();
+  ).bind(externalId, sourceId).first();
 
   // Extract all available fields from Ashby response
   const title = job.title ? job.title.trim().substring(0, 255) : '';
@@ -207,6 +212,20 @@ async function processJob(config, job, jobBoardName) {
   const payout = 0.0;
   const payoutType = 'none';
 
+  // Extract company logo from apply URL (non-blocking)
+  let companyLogo = null;
+  let companyLogoSource = null;
+  if (applyUrl) {
+    try {
+      const logoResult = await extractCompanyLogo(applyUrl);
+      companyLogo = logoResult.logoUrl;
+      companyLogoSource = logoResult.source;
+    } catch (err) {
+      // Logo extraction failure does not block job import
+      console.warn(`Logo extraction failed for ${applyUrl}:`, err.message);
+    }
+  }
+
   if (existing) {
     // Update existing offer - SAFE UPDATE with null preservation
     const updates = [];
@@ -247,13 +266,10 @@ async function processJob(config, job, jobBoardName) {
     // Job details
     if (department) {
       updates.push('category_id = ?');
-      const categoryId = await ensureCategory(env, department);
+      const categoryId = await ensureCategory(config, department);
       bindings.push(categoryId);
     }
-    if (team) {
-      updates.push('team = ?');
-      bindings.push(team);
-    }
+    // Note: 'team' column does not exist in schema, skip it
 
     updates.push('remote = ?');
     bindings.push(isRemote);
@@ -306,6 +322,12 @@ async function processJob(config, job, jobBoardName) {
       bindings.push(sourceRaw);
     }
 
+    // Update company logo if extracted
+    if (companyLogo) {
+      updates.push('company_logo = ?', 'company_logo_source = ?', 'company_logo_updated_at = CURRENT_TIMESTAMP');
+      bindings.push(companyLogo, companyLogoSource);
+    }
+
     // Execute update
     bindings.push(existing.id);
     await config.db.prepare(`
@@ -318,7 +340,7 @@ async function processJob(config, job, jobBoardName) {
   }
 
   // Insert new offer
-  const categoryId = await ensureCategory(env, department || 'General');
+  const categoryId = await ensureCategory(config, department || 'General');
   const offerId = `ashby-${externalId}`;
 
   await config.db.prepare(`
@@ -332,18 +354,20 @@ async function processJob(config, job, jobBoardName) {
       date_posted,
       source_raw,
       secondary_locations,
+      company_logo, company_logo_source, company_logo_updated_at,
       status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).bind(
     offerId, externalId, title, description, descriptionHtml,
     sourceUrl || applyUrl, applyUrl, payout, payoutType,
-    categoryId, ASHBY_SOURCE_ID,
+    categoryId, sourceId,
     locationText, locationCity, locationState, locationCountry, isRemote,
     workplaceType, employmentType,
     salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryDisplay,
     publishedAt,
     sourceRaw,
-    secondaryLocations
+    secondaryLocations,
+    companyLogo, companyLogoSource, companyLogo ? new Date().toISOString() : null
   ).run();
 
   return 'imported';
@@ -384,21 +408,21 @@ async function ensureCategory(config, categoryName) {
 /**
  * Deactivate Ashby offers no longer in API response
  */
-async function deactivateRemovedJobs(config, activeIds, jobBoardName) {
-  const activeOffers = await config.db.prepare(`
-    SELECT external_id FROM offers
-    WHERE source_id = ? AND status = 'active'
-  `).bind(ASHBY_SOURCE_ID).all();
+async function deactivateRemovedJobs(config, activeIds, sourceId) {
+  // Get all active Ashby offers
+  const { results: offers } = await config.db.prepare(`
+    SELECT external_id FROM offers WHERE source_id = ? AND status = 'active'
+  `).bind(sourceId).all();
 
   let deactivated = 0;
 
-  for (const offer of activeOffers.results || []) {
+  for (const offer of offers || []) {
     if (!activeIds.has(offer.external_id)) {
       await config.db.prepare(`
         UPDATE offers
         SET status = 'expired', updated_at = CURRENT_TIMESTAMP
         WHERE external_id = ? AND source_id = ?
-      `).bind(offer.external_id, ASHBY_SOURCE_ID).run();
+      `).bind(offer.external_id, sourceId).run();
       deactivated++;
     }
   }

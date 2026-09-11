@@ -6,6 +6,9 @@
 export const ROUTES = {
   // API endpoints
   HEALTH: '/health',
+  MANUAL_SYNC: '/api/manual-sync', // TEMPORARY for MVP verification
+  LOGO_TEST: '/api/admin/logo-test', // TEMPORARY for logo testing
+  LOGO_BACKFILL: '/api/admin/logo-backfill', // TEMPORARY for logo backfill
   OFFERS: '/offers',
   OFFERS_DETAIL: /^\/offers\/[\w-]+$/,
   CATEGORIES: '/categories',
@@ -28,6 +31,21 @@ export const routeRequest = (pathname) => {
   // Health check
   if (pathname === ROUTES.HEALTH) {
     return { type: 'health' };
+  }
+  
+  // TEMPORARY: Manual sync trigger
+  if (pathname === ROUTES.MANUAL_SYNC) {
+    return { type: 'api_manual_sync' };
+  }
+  
+  // TEMPORARY: Logo extraction test
+  if (pathname === ROUTES.LOGO_TEST) {
+    return { type: 'api_logo_test' };
+  }
+  
+  // TEMPORARY: Logo backfill
+  if (pathname === ROUTES.LOGO_BACKFILL) {
+    return { type: 'api_logo_backfill' };
   }
   
   // API: Offers list

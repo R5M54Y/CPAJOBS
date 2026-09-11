@@ -10,6 +10,14 @@ export const getOffers = async (request, config) => {
     const page = parseInt(url.searchParams.get('page')) || 1;
     const offset = (page - 1) * limit;
 
+    // Get total count
+    const countResult = await config.db.prepare(
+      'SELECT COUNT(*) as count FROM offers WHERE status = ?'
+    ).bind(status).first();
+
+    const totalCount = countResult?.count || 0;
+
+    // Get paginated results
     const result = await config.db.prepare(
       'SELECT * FROM offers WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
     ).bind(status, limit, offset).all();
@@ -19,7 +27,7 @@ export const getOffers = async (request, config) => {
       pagination: {
         page,
         limit,
-        total: result.results?.length || 0,
+        total: totalCount,
       },
     }), {
       headers: { 'Content-Type': 'application/json' },
@@ -65,7 +73,7 @@ export const getOfferDetail = async (config, offerId) => {
 export const getCategories = async (config) => {
   try {
     const result = await config.db.prepare(
-      'SELECT DISTINCT category FROM offers WHERE status = "active" ORDER BY category'
+      'SELECT DISTINCT category_id FROM offers WHERE status = "active" ORDER BY category_id'
     ).all();
 
     return new Response(JSON.stringify({
