@@ -14,6 +14,9 @@ export const getConfig = (env) => {
     // Environment
     environment: env.ENVIRONMENT || 'production',
     
+    // Google Search Console verification
+    googleVerification: env.GOOGLE_SITE_VERIFICATION || '',
+    
     // Database and KV bindings injected by Wrangler
     db: env.DB,
     kv: env.CPAJOBS_KV,

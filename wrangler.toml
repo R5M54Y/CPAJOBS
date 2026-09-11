@@ -20,4 +20,4 @@ crons = ["59 15 * * *"]
 
 # Production environment configuration
 [env.production]
-vars = { ENVIRONMENT = "production", CANONICAL_HOSTNAME = "usajobs.usajobs.workers.dev" }
+vars = { ENVIRONMENT = "production", CANONICAL_HOSTNAME = "usajobs.usajobs.workers.dev", GOOGLE_SITE_VERIFICATION = "zEgd8iW1JqgWv7knYKK_EgkhdK4bwDpBRPIT5kkdYZg" }
