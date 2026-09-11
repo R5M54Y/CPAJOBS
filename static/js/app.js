@@ -977,8 +977,9 @@ class CPAJobsApp {
 
         await this.trackClick(offerId, clickData);
 
-        // Redirect to verified URL
-        window.location.href = verifyResult.redirectUrl || offer.apply_url;
+        // Open verified URL in a new tab, keep Job Detail in current tab
+        const redirectUrl = verifyResult.redirectUrl || offer.apply_url;
+        window.open(redirectUrl, '_blank', 'noopener,noreferrer');
         return true;
       }
 
