@@ -639,7 +639,7 @@ class CPAJobsApp {
         
         <div class="job-footer">
           ${salary ? `<span class="job-salary">${salary}</span>` : '<span></span>'}
-          ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">Apply Now</a>` : '<button class="apply-btn" disabled>Apply</button>'}
+          ${applyUrl ? `<button type="button" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">Apply Now</button>` : '<button class="apply-btn" disabled>Apply</button>'}
         </div>
       </div>
     `;
@@ -782,7 +782,7 @@ class CPAJobsApp {
             <aside class="job-sidebar">
               
               <div class="sidebar-card apply-card">
-                ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-button" onclick="app.handleOfferClick('${job.id}')">Apply for this Position</a>` : `<button class="apply-button" disabled style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>`}
+                ${applyUrl ? `<button type="button" class="apply-button" onclick="app.handleOfferClick('${job.id}')">Apply for this Position</button>` : `<button class="apply-button" disabled style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>`}
                 <p class="apply-note">You will be redirected to the application page.</p>
               </div>
 
@@ -916,7 +916,7 @@ class CPAJobsApp {
         
         <div class="job-footer">
           ${salary ? `<span class="job-salary">${salary}</span>` : '<span></span>'}
-          ${applyUrl ? `<a href="${applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">View Job →</a>` : '<button class="apply-btn" disabled>View Job</button>'}
+          ${applyUrl ? `<button type="button" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">View Job →</button>` : '<button class="apply-btn" disabled>View Job</button>'}
         </div>
       </div>
     `;
