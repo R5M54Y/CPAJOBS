@@ -7,7 +7,7 @@ import { importAllAshbyBoards, importAshbyJobsByName } from './importers/ashby-m
 import { getConfig, validateConfig } from './core/config.js';
 import { routeRequest } from './core/routing.js';
 import { getOffers, getOfferDetail, getCategories, trackClick, health, verifyApplyUrl } from './handlers/api.js';
-import { generateSitemap, serveRobotsTxt } from './handlers/seo.js';
+import { generateSitemapIndex, generatePagesSitemap, generateJobsSitemap, serveRobotsTxt } from './handlers/seo.js';
 import { serveStatic } from './handlers/static.js';
 import { serveJobDetail, serveCategoryPage } from './handlers/pages.js';
 import { handleLogoAdminRequest } from './handlers/admin-logo.js';
@@ -89,8 +89,14 @@ export default {
         }
         return new Response('Method not allowed', { status: 405 });
         
-      case 'seo_sitemap':
-        return generateSitemap(config, canonicalHostname);
+      case 'seo_sitemap_index':
+        return generateSitemapIndex(canonicalHostname);
+        
+      case 'seo_sitemap_pages':
+        return generatePagesSitemap(config, canonicalHostname);
+        
+      case 'seo_sitemap_jobs':
+        return generateJobsSitemap(config, canonicalHostname);
         
       case 'seo_robots':
         return serveRobotsTxt(canonicalHostname);

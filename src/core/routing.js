@@ -17,6 +17,8 @@ export const ROUTES = {
   
   // SEO endpoints
   SITEMAP: '/sitemap.xml',
+  SITEMAP_PAGES: '/sitemap-pages.xml',
+  SITEMAP_JOBS: '/sitemap-jobs.xml',
   ROBOTS: '/robots.txt',
   
   // Job detail pages (SEO)
@@ -78,9 +80,19 @@ export const routeRequest = (pathname) => {
     return { type: 'api_apply', pathname };
   }
   
-  // SEO: Sitemap
+  // SEO: Sitemap index
   if (pathname === ROUTES.SITEMAP) {
-    return { type: 'seo_sitemap' };
+    return { type: 'seo_sitemap_index' };
+  }
+  
+  // SEO: Pages sitemap
+  if (pathname === ROUTES.SITEMAP_PAGES) {
+    return { type: 'seo_sitemap_pages' };
+  }
+  
+  // SEO: Jobs sitemap
+  if (pathname === ROUTES.SITEMAP_JOBS) {
+    return { type: 'seo_sitemap_jobs' };
   }
   
   // SEO: Robots
