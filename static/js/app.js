@@ -876,10 +876,9 @@ class CPAJobsApp {
             <h1>Unable to Verify Application Page</h1>
             <p>We couldn't verify the application page availability right now.</p>
             ${error.title ? `<p class="expired-job-title">"${error.title}"</p>` : ''}
-            <p style="font-size: 0.875rem; color: #666; margin-top: 1rem;">This may be a temporary issue. You can try again or proceed directly to the application page.</p>
+            <p style="font-size: 0.875rem; color: #666; margin-top: 1rem;">This may be a temporary issue. You can try again or return to browse other jobs.</p>
             <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
               ${error.offerId ? `<button class="apply-button" onclick="app.retryApply('${error.offerId}')">Retry</button>` : ''}
-              ${error.applyUrl ? `<a href="${error.applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-button" style="background: #666;">Proceed Anyway</a>` : ''}
               <a href="/jobs/" class="back-link" onclick="event.preventDefault(); app.navigate('/jobs/')">← Browse Jobs</a>
             </div>
           </div>
@@ -916,7 +915,7 @@ class CPAJobsApp {
         
         <div class="job-footer">
           ${salary ? `<span class="job-salary">${salary}</span>` : '<span></span>'}
-          ${applyUrl ? `<button type="button" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">View Job →</button>` : '<button class="apply-btn" disabled>View Job</button>'}
+          ${applyUrl ? `<button type="button" class="apply-btn" onclick="event.stopPropagation(); app.navigate('${permalink}')">View Job →</button>` : '<button class="apply-btn" disabled>View Job</button>'}
         </div>
       </div>
     `;
