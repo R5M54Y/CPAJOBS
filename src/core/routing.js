@@ -13,6 +13,7 @@ export const ROUTES = {
   OFFERS_DETAIL: /^\/offers\/[\w-]+$/,
   CATEGORIES: '/categories',
   TRACK_CLICK: '/track/click',
+  APPLY: '/apply',
   
   // SEO endpoints
   SITEMAP: '/sitemap.xml',
@@ -70,6 +71,11 @@ export const routeRequest = (pathname) => {
   // API: Track click
   if (pathname === ROUTES.TRACK_CLICK) {
     return { type: 'api_track_click', pathname };
+  }
+  
+  // API: Apply verification
+  if (pathname === ROUTES.APPLY) {
+    return { type: 'api_apply', pathname };
   }
   
   // SEO: Sitemap

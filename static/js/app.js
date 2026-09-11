@@ -345,6 +345,12 @@ class CPAJobsApp {
       case 'offer-detail':
         html = this.renderOfferDetail();
         break;
+      case 'job-expired':
+        html = this.renderJobExpired();
+        break;
+      case 'verification-error':
+        html = this.renderVerificationError();
+        break;
       case 'admin':
         html = this.renderAdmin();
         break;
@@ -839,6 +845,53 @@ class CPAJobsApp {
     `;
   }
 
+  renderJobExpired() {
+    const job = this.state.expiredJob || {};
+    
+    return `
+      <div class="job-detail-page">
+        <div class="job-detail-container">
+          <div class="job-not-found">
+            <h1>Job No Longer Available</h1>
+            <p>This job posting has expired or is no longer accepting applications.</p>
+            ${job.title ? `<p class="expired-job-title">"${job.title}"</p>` : ''}
+            <p style="font-size: 0.875rem; color: #666; margin-top: 1rem;">The application page for this position is no longer accessible.</p>
+            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+              <a href="/jobs/" class="apply-button" onclick="event.preventDefault(); app.navigate('/jobs/')">Browse All Jobs</a>
+              ${job.id ? `<a href="/jobs/" class="back-link" onclick="event.preventDefault(); history.back()">← Back</a>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderVerificationError() {
+    const error = this.state.verificationError || {};
+    
+    return `
+      <div class="job-detail-page">
+        <div class="job-detail-container">
+          <div class="job-not-found">
+            <h1>Unable to Verify Application Page</h1>
+            <p>We couldn't verify the application page availability right now.</p>
+            ${error.title ? `<p class="expired-job-title">"${error.title}"</p>` : ''}
+            <p style="font-size: 0.875rem; color: #666; margin-top: 1rem;">This may be a temporary issue. You can try again or proceed directly to the application page.</p>
+            <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+              ${error.offerId ? `<button class="apply-button" onclick="app.retryApply('${error.offerId}')">Retry</button>` : ''}
+              ${error.applyUrl ? `<a href="${error.applyUrl}" target="_blank" rel="noopener noreferrer" class="apply-button" style="background: #666;">Proceed Anyway</a>` : ''}
+              <a href="/jobs/" class="back-link" onclick="event.preventDefault(); app.navigate('/jobs/')">← Browse Jobs</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async retryApply(offerId) {
+    await this.handleOfferClick(offerId);
+  }
+
   renderOfferCard(offer) {
     const permalink = this.generateJobPermalink(offer);
     const location = offer.location || [offer.location_city, offer.location_state, offer.location_country].filter(Boolean).join(', ') || 'Location not specified';
@@ -883,25 +936,58 @@ class CPAJobsApp {
   }
 
   async handleOfferClick(offerId) {
-    const clickData = {
-      offer_id: offerId,
-      ip_address: 'unknown',
-      user_agent: navigator.userAgent,
-      referrer: document.referrer,
-      metadata: {
-        source: 'frontend_mvp',
-        timestamp: new Date().toISOString()
+    const offer = this.state.selectedOffer || this.state.offers.find(o => o.id === offerId);
+    
+    if (!offer || !offer.apply_url) {
+      console.error('No apply URL found for offer:', offerId);
+      return false;
+    }
+
+    // Verify apply URL before redirect
+    try {
+      const verifyResponse = await this.apiCall(`/apply?id=${encodeURIComponent(offerId)}&url=${encodeURIComponent(offer.apply_url)}`);
+      const verifyResult = await verifyResponse.json();
+
+      if (!verifyResponse.ok || !verifyResult.available) {
+        // Job application URL is not available (404)
+        this.state.currentView = 'job-expired';
+        this.state.expiredJob = {
+          id: offerId,
+          title: offer.title,
+          statusCode: verifyResult.statusCode
+        };
+        this.render();
+        return false;
       }
-    };
 
-    const result = await this.trackClick(offerId, clickData);
+      // Track click
+      const clickData = {
+        offer_id: offerId,
+        ip_address: 'unknown',
+        user_agent: navigator.userAgent,
+        referrer: document.referrer,
+        metadata: {
+          source: 'frontend_mvp',
+          timestamp: new Date().toISOString(),
+          apply_url_verified: true
+        }
+      };
 
-    if (result.success) {
-      console.log('Click tracked successfully:', result);
+      await this.trackClick(offerId, clickData);
+
+      // Redirect to verified URL
+      window.location.href = verifyResult.redirectUrl || offer.apply_url;
       return true;
-    } else {
-      console.error('Click tracking failed:', result.error);
-      this.state.error = result.error || 'Tracking failed';
+    } catch (error) {
+      console.error('Apply verification failed:', error);
+      
+      // On verification failure, show retry option
+      this.state.currentView = 'verification-error';
+      this.state.verificationError = {
+        offerId,
+        applyUrl: offer.apply_url,
+        title: offer.title
+      };
       this.render();
       return false;
     }

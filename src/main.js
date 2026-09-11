@@ -6,7 +6,7 @@
 import { importAllAshbyBoards, importAshbyJobsByName } from './importers/ashby-multi.js';
 import { getConfig, validateConfig } from './core/config.js';
 import { routeRequest } from './core/routing.js';
-import { getOffers, getOfferDetail, getCategories, trackClick, health } from './handlers/api.js';
+import { getOffers, getOfferDetail, getCategories, trackClick, health, verifyApplyUrl } from './handlers/api.js';
 import { generateSitemap, serveRobotsTxt } from './handlers/seo.js';
 import { serveStatic } from './handlers/static.js';
 import { serveJobDetail, serveCategoryPage } from './handlers/pages.js';
@@ -80,6 +80,12 @@ export default {
       case 'api_track_click':
         if (request.method === 'POST') {
           return trackClick(request, config);
+        }
+        return new Response('Method not allowed', { status: 405 });
+        
+      case 'api_apply':
+        if (request.method === 'GET') {
+          return verifyApplyUrl(request, config);
         }
         return new Response('Method not allowed', { status: 405 });
         

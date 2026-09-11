@@ -137,11 +137,167 @@ export const health = async (config) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    console.error('Track click error:', error);
     return new Response(JSON.stringify({
-      status: 'error',
-      error: error.message,
+      error: 'Click tracking failed',
     }), {
-      status: 503,
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const verifyApplyUrl = async (request, config) => {
+  try {
+    const url = new URL(request.url);
+    const offerId = url.searchParams.get('id');
+    const applyUrl = url.searchParams.get('url');
+
+    if (!offerId || !applyUrl) {
+      return new Response(JSON.stringify({
+        error: 'Missing id or url parameter',
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get job from database to verify it exists
+    const jobResult = await config.db.prepare(
+      'SELECT id, title, apply_url FROM offers WHERE id = ?'
+    ).bind(offerId).first();
+
+    if (!jobResult) {
+      return new Response(JSON.stringify({
+        error: 'Job not found',
+        available: false,
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify that requested URL matches job's apply_url
+    if (jobResult.apply_url !== applyUrl) {
+      return new Response(JSON.stringify({
+        error: 'Apply URL mismatch',
+        available: false,
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if apply_url is accessible
+    try {
+      const checkResponse = await fetch(applyUrl, {
+        method: 'HEAD',
+        redirect: 'follow',
+      });
+
+      // 404 = expired job
+      if (checkResponse.status === 404) {
+        return new Response(JSON.stringify({
+          error: 'Job application page not found',
+          available: false,
+          statusCode: 404,
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 200-299 = success
+      if (checkResponse.status >= 200 && checkResponse.status < 300) {
+        return new Response(JSON.stringify({
+          available: true,
+          statusCode: checkResponse.status,
+          redirectUrl: checkResponse.url || applyUrl,
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 3xx = redirect (follow and report final URL)
+      if (checkResponse.status >= 300 && checkResponse.status < 400) {
+        return new Response(JSON.stringify({
+          available: true,
+          statusCode: checkResponse.status,
+          redirectUrl: checkResponse.url || applyUrl,
+          redirect: true,
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 401/403 = don't classify as expired, these are often bot protection
+      if (checkResponse.status === 401 || checkResponse.status === 403) {
+        return new Response(JSON.stringify({
+          available: true,
+          statusCode: checkResponse.status,
+          redirectUrl: applyUrl,
+          note: 'Authentication/permission required but URL appears valid',
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 429 = rate limiting, don't classify as expired
+      if (checkResponse.status === 429) {
+        return new Response(JSON.stringify({
+          available: true,
+          statusCode: checkResponse.status,
+          redirectUrl: applyUrl,
+          note: 'Rate limited but URL appears valid',
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Other 5xx = temporary failure, don't classify as expired
+      if (checkResponse.status >= 500) {
+        return new Response(JSON.stringify({
+          available: true,
+          statusCode: checkResponse.status,
+          redirectUrl: applyUrl,
+          note: 'Server error but URL may be temporarily unavailable',
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Other status codes
+      return new Response(JSON.stringify({
+        available: true,
+        statusCode: checkResponse.status,
+        redirectUrl: applyUrl,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (fetchError) {
+      // Network error, DNS failure, timeout - don't classify as expired
+      return new Response(JSON.stringify({
+        available: true,
+        redirectUrl: applyUrl,
+        error: 'Could not verify URL availability',
+        note: 'Network error but allowing redirect to proceed',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  } catch (error) {
+    console.error('Apply verification error:', error);
+    return new Response(JSON.stringify({
+      error: 'Verification failed',
+    }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
