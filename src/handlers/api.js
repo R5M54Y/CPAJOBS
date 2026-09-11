@@ -282,6 +282,7 @@ export const verifyApplyUrl = async (request, config) => {
       });
     } catch (fetchError) {
       // Network error, DNS failure, timeout - don't classify as expired
+      console.error('Network error during apply URL check:', fetchError.message);
       return new Response(JSON.stringify({
         available: true,
         redirectUrl: applyUrl,
