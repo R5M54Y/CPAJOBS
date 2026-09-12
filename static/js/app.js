@@ -755,7 +755,7 @@ class CPAJobsApp {
           
           <div class="job-breadcrumb">
             <a href="/" onclick="event.preventDefault(); app.navigate('/')">Jobs</a>
-            ${categoryName ? `<span>/</span><span>${categoryName}</span>` : ''}
+            ${categoryName ? `<span>/</span><a href="/jobs/" onclick="event.preventDefault(); app.navigate('/jobs/'); app.setSelectedCategory('${job.category_id}')">${categoryName}</a>` : ''}
             <span>/</span><span>${job.title}</span>
           </div>
 
@@ -771,9 +771,9 @@ class CPAJobsApp {
             </div>
             
             <div class="job-header-meta">
-              ${job.employment_type ? `<span class="job-meta-badge">📋 ${job.employment_type}</span>` : ''}
-              ${job.remote ? `<span class="job-meta-badge remote">🌍 ${job.workplace_type || 'Remote'}</span>` : ''}
-              ${categoryName ? `<span class="job-meta-badge category">${categoryName}</span>` : ''}
+              ${job.employment_type ? `<a href="/jobs/" class="job-meta-badge" onclick="event.preventDefault(); app.navigate('/jobs/')">📋 ${job.employment_type}</a>` : ''}
+              ${job.remote ? `<a href="/jobs/" class="job-meta-badge remote" onclick="event.preventDefault(); app.navigate('/jobs/')">🌍 ${job.workplace_type || 'Remote'}</a>` : ''}
+              ${categoryName ? `<a href="/jobs/" class="job-meta-badge category" onclick="event.preventDefault(); app.navigate('/jobs/'); app.setSelectedCategory('${job.category_id}')">${categoryName}</a>` : ''}
             </div>
           </div>
 
