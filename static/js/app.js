@@ -38,24 +38,40 @@ class CPAJobsApp {
       const pathSegment = pathname.slice(6);
       const jobId = this.extractJobIdFromPath(pathSegment);
       
+      // If jobId found, render job detail
       if (jobId) {
         this.state.currentView = 'offer-detail';
         this.state.routeParams = { id: jobId };
         await this.loadOfferDetail();
         this.render();
         return;
-      } else {
-        this.state.currentView = 'offer-detail';
-        this.state.routeParams = {};
-        this.state.error = 'Job not found';
-        this.state.selectedOffer = null;
+      }
+      
+      // If no jobId, check if it's a category slug
+      const categoryId = await this.getCategoryIdBySlug(pathSegment);
+      if (categoryId) {
+        this.state.currentView = 'categories';
+        this.state.selectedCategory = categoryId;
+        this.state.currentPage = 1;
+        this.state.routeParams = { category: pathSegment };
+        await this.loadCategories();
         this.render();
         return;
       }
+      
+      // Neither job nor category found
+      this.state.currentView = 'offer-detail';
+      this.state.routeParams = {};
+      this.state.error = 'Job not found';
+      this.state.selectedOffer = null;
+      this.render();
+      return;
     }
     
     if (pathname === '/jobs' || pathname === '/jobs/') {
       this.state.currentView = 'categories';
+      this.state.selectedCategory = null;
+      this.state.currentPage = 1;
       this.state.routeParams = {};
       await this.loadCategories();
       this.render();
@@ -127,10 +143,50 @@ class CPAJobsApp {
     return null;
   }
 
+  async getCategoryIdBySlug(slug) {
+    // Try to find category by slug from current offers
+    for (const offer of this.state.offers) {
+      if (offer.category && offer.category.slug === slug) {
+        return offer.category_id;
+      }
+    }
+    
+    // If not found in current offers, load all categories and search
+    try {
+      const response = await this.apiCall('/categories');
+      if (response.ok) {
+        const data = await response.json();
+        const categories = data.categories || [];
+        
+        for (const cat of categories) {
+          if (cat.slug === slug) {
+            return cat.category_id;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+    
+    return null;
+  }
+
   generateJobPermalink(job) {
     if (!job || !job.id) return '/';
     const slug = this.normalizeSlug(job.title || 'job');
     return `/jobs/${slug}-${job.id}`;
+  }
+
+  generateCategoryUrl(categoryId, categorySlug) {
+    // Use slug if available, otherwise derive from categoryId
+    const slug = categorySlug || this.getCategorySlugFromId(categoryId);
+    return slug ? `/jobs/${slug}` : '/jobs/';
+  }
+
+  getCategorySlugFromId(categoryId) {
+    if (!categoryId) return null;
+    // Remove 'cat-' prefix to get slug (cat-engineering → engineering)
+    return categoryId.replace(/^cat-/, '');
   }
 
   normalizeSlug(title) {
@@ -755,7 +811,7 @@ class CPAJobsApp {
           
           <div class="job-breadcrumb">
             <a href="/" onclick="event.preventDefault(); app.navigate('/')">Jobs</a>
-            ${categoryName ? `<span>/</span><a href="/jobs/" onclick="event.preventDefault(); app.navigate('/jobs/'); app.setSelectedCategory('${job.category_id}')">${categoryName}</a>` : ''}
+            ${categoryName ? `<span>/</span><a href="${this.generateCategoryUrl(job.category_id, job.category?.slug)}" onclick="event.preventDefault(); app.navigate('${this.generateCategoryUrl(job.category_id, job.category?.slug)}')">${categoryName}</a>` : ''}
             <span>/</span><span>${job.title}</span>
           </div>
 
@@ -773,7 +829,7 @@ class CPAJobsApp {
             <div class="job-header-meta">
               ${job.employment_type ? `<a href="/jobs/" class="job-meta-badge" onclick="event.preventDefault(); app.navigate('/jobs/')">📋 ${job.employment_type}</a>` : ''}
               ${job.remote ? `<a href="/jobs/" class="job-meta-badge remote" onclick="event.preventDefault(); app.navigate('/jobs/')">🌍 ${job.workplace_type || 'Remote'}</a>` : ''}
-              ${categoryName ? `<a href="/jobs/" class="job-meta-badge category" onclick="event.preventDefault(); app.navigate('/jobs/'); app.setSelectedCategory('${job.category_id}')">${categoryName}</a>` : ''}
+              ${categoryName ? `<a href="${this.generateCategoryUrl(job.category_id, job.category?.slug)}" class="job-meta-badge category" onclick="event.preventDefault(); app.navigate('${this.generateCategoryUrl(job.category_id, job.category?.slug)}')">${categoryName}</a>` : ''}
             </div>
           </div>
 
