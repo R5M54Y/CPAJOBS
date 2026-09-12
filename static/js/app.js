@@ -159,7 +159,10 @@ class CPAJobsApp {
         const categories = data.categories || [];
         
         for (const cat of categories) {
-          if (cat.slug === slug) {
+          // Backend returns category_id (e.g., "cat-engineering")
+          // Derive slug from category_id (remove "cat-" prefix)
+          const catSlug = cat.category_id ? cat.category_id.replace(/^cat-/, '') : null;
+          if (catSlug === slug) {
             return cat.category_id;
           }
         }
