@@ -20,17 +20,7 @@ export const serveStatic = (pathname, config) => {
   const file = STATIC_FILES[pathname];
   
   if (file) {
-    let content = file.content;
-    
-    // Inject Google Search Console verification meta tag
-    if (file.type.includes('text/html') && config.googleVerification) {
-      const verificationTag = '  <meta name="google-site-verification" content="' + config.googleVerification + '">
-\n';
-      // Insert before </head> closing tag
-      content = content.replace('</head>', verificationTag + '</head>');
-    }
-    
-    return new Response(content, {
+    return new Response(file.content, {
       headers: {
         'Content-Type': file.type,
         'Cache-Control': 'public, max-age=3600',
