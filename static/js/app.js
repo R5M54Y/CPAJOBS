@@ -765,7 +765,7 @@ class CPAJobsApp {
                 <h1 class="job-title">${job.title}</h1>
                 <div class="job-company-info">
                   ${job.company ? `<span class="job-company">${job.company}</span>` : ''}
-                  ${location ? `<span class="job-location">📍 ${location}</span>` : ''}
+                  ${location ? `<a href="/jobs/" class="job-location" onclick="event.preventDefault(); app.navigate('/jobs/')">📍 ${location}</a>` : ''}
                 </div>
               </div>
             </div>
