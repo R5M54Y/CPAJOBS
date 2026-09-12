@@ -240,7 +240,14 @@ class CPAJobsApp {
 
       const page = parseInt(this.state.routeParams.page) || 1;
       const limit = 20;
-      const offersResponse = await this.apiCall('/offers', { status: 'active', limit, page });
+      const params = { status: 'active', limit, page };
+      
+      // Pass category_id to filter if selected
+      if (this.state.selectedCategory) {
+        params.category_id = this.state.selectedCategory;
+      }
+      
+      const offersResponse = await this.apiCall('/offers', params);
       if (offersResponse.ok) {
         const data = await offersResponse.json();
         this.state.offers = data.offers || [];

@@ -8,19 +8,31 @@ export const getOffers = async (request, config) => {
     const status = url.searchParams.get('status') || 'active';
     const limit = parseInt(url.searchParams.get('limit')) || 20;
     const page = parseInt(url.searchParams.get('page')) || 1;
+    const categoryId = url.searchParams.get('category_id');
     const offset = (page - 1) * limit;
 
+    // Build dynamic query based on filters
+    let countQuery = 'SELECT COUNT(*) as count FROM offers WHERE status = ?';
+    let selectQuery = 'SELECT * FROM offers WHERE status = ?';
+    let bindings = [status];
+
+    if (categoryId) {
+      countQuery += ' AND category_id = ?';
+      selectQuery += ' AND category_id = ?';
+      bindings.push(categoryId);
+    }
+
+    selectQuery += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+
     // Get total count
-    const countResult = await config.db.prepare(
-      'SELECT COUNT(*) as count FROM offers WHERE status = ?'
-    ).bind(status).first();
+    const countResult = await config.db.prepare(countQuery)
+      .bind(...bindings).first();
 
     const totalCount = countResult?.count || 0;
 
     // Get paginated results
-    const result = await config.db.prepare(
-      'SELECT * FROM offers WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
-    ).bind(status, limit, offset).all();
+    const result = await config.db.prepare(selectQuery)
+      .bind(...bindings, limit, offset).all();
 
     return new Response(JSON.stringify({
       offers: result.results || [],
