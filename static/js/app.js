@@ -15,7 +15,9 @@ class CPAJobsApp {
       paginationTotal: 0,
       currentPage: 1,
       pageSize: 20,
-      searchQuery: null
+      searchQuery: null,
+      relatedJobs: [],
+      relatedJobsLoading: false
     };
     this.baseUrl = '';
     this.init();
@@ -311,6 +313,43 @@ class CPAJobsApp {
       console.error('Offer detail error:', error);
     } finally {
       this.setLoading(false);
+      this.render();
+      
+      // Load related jobs asynchronously after page renders
+      if (this.state.selectedOffer) {
+        this.loadRelatedJobs();
+      }
+    }
+  }
+
+  async loadRelatedJobs() {
+    if (!this.state.selectedOffer || !this.state.selectedOffer.title) {
+      return;
+    }
+
+    this.state.relatedJobsLoading = true;
+    this.state.relatedJobs = [];
+
+    try {
+      const keyword = this.state.selectedOffer.title;
+      const limit = 6;
+      const response = await this.apiCall('/offers', { q: keyword, limit });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const allJobs = data.offers || [];
+        
+        // Exclude current job by ID
+        const currentJobId = this.state.selectedOffer.id;
+        const filtered = allJobs.filter(job => job.id !== currentJobId);
+        
+        this.state.relatedJobs = filtered.slice(0, 6);
+      }
+    } catch (error) {
+      console.error('Related jobs load error:', error);
+      this.state.relatedJobs = [];
+    } finally {
+      this.state.relatedJobsLoading = false;
       this.render();
     }
   }
@@ -904,6 +943,8 @@ class CPAJobsApp {
               ${hasSkills ? `<section class="job-section"><h2>Skills</h2><div class="job-description-text">${job.skills.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
               ${hasEducation ? `<section class="job-section"><h2>Education</h2><div class="job-description-text">${job.education.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
               ${hasBenefits ? `<section class="job-section"><h2>Benefits & Perks</h2><div class="job-description-text">${Array.isArray(job.benefits) ? '<ul>' + job.benefits.map(b => `<li>${b}</li>`).join('') + '</ul>' : job.benefits.split('\\n\\n').map(p => `<p>${p}</p>`).join('')}</div></section>` : ''}
+              
+              ${this.renderRelatedJobs()}
             </main>
 
           </div>
@@ -1012,6 +1053,32 @@ class CPAJobsApp {
     this.state.selectedCategory = category;
     this.state.currentPage = 1;
     this.render();
+  }
+
+  renderRelatedJobs() {
+    if (this.state.relatedJobsLoading) {
+      return `
+        <section class="related-jobs-section">
+          <h2 class="related-jobs-title">Related Jobs</h2>
+          <div class="related-jobs-grid">
+            <div class="loading-message">Loading related opportunities...</div>
+          </div>
+        </section>
+      `;
+    }
+
+    if (!this.state.relatedJobs || this.state.relatedJobs.length === 0) {
+      return '';
+    }
+
+    return `
+      <section class="related-jobs-section">
+        <h2 class="related-jobs-title">Related Jobs</h2>
+        <div class="related-jobs-grid">
+          ${this.state.relatedJobs.map(job => this.renderOfferCard(job)).join('')}
+        </div>
+      </section>
+    `;
   }
 
   async goToPage(pageNum) {
