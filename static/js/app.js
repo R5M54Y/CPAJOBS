@@ -331,8 +331,16 @@ class CPAJobsApp {
     this.state.relatedJobs = [];
 
     try {
-      const keyword = this.state.selectedOffer.title;
-      const limit = 6;
+      // Extract base keyword from title for broader search
+      const fullTitle = this.state.selectedOffer.title;
+      let keyword = fullTitle;
+      
+      // Remove common qualifiers to get base role
+      // e.g., "Senior Software Engineer, Infrastructure" → "Software Engineer"
+      keyword = keyword.replace(/^(Senior|Junior|Lead|Staff|Principal|Associate)\s+/i, '');
+      keyword = keyword.replace(/,.*$/, '').trim(); // Remove everything after comma
+      
+      const limit = 7; // Request 7 to ensure 6 after filtering current job
       const response = await this.apiCall('/offers', { q: keyword, limit });
       
       if (response.ok) {
