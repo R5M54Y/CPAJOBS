@@ -324,7 +324,6 @@ class CPAJobsApp {
 
   async loadRelatedJobs() {
     if (!this.state.selectedOffer || !this.state.selectedOffer.title) {
-      console.log('[RELATED DEBUG] No selectedOffer or title');
       return;
     }
 
@@ -341,44 +340,25 @@ class CPAJobsApp {
       keyword = keyword.replace(/^(Senior|Junior|Lead|Staff|Principal|Associate)\s+/i, '');
       keyword = keyword.replace(/,.*$/, '').trim(); // Remove everything after comma
       
-      console.log('[RELATED DEBUG] fullTitle:', fullTitle);
-      console.log('[RELATED DEBUG] extracted keyword:', keyword);
-      
       const limit = 10; // Request 10 to ensure 6 after filtering current job
       const response = await this.apiCall('/offers', { q: keyword, limit });
       
-      console.log('[RELATED DEBUG] response.ok:', response.ok);
-      console.log('[RELATED DEBUG] response.status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('[RELATED DEBUG] parsed data:', data);
-        console.log('[RELATED DEBUG] data.offers:', data.offers);
-        console.log('[RELATED DEBUG] data.offers?.length:', data.offers?.length);
-        
         const allJobs = data.offers || [];
-        console.log('[RELATED DEBUG] allJobs.length:', allJobs.length);
         
         // Exclude current job by ID
         const currentJobId = this.state.selectedOffer.id;
-        console.log('[RELATED DEBUG] currentJobId:', currentJobId);
-        console.log('[RELATED DEBUG] returned IDs:', allJobs.map(job => job.id));
-        
         const filtered = allJobs.filter(job => job.id !== currentJobId);
-        console.log('[RELATED DEBUG] filtered.length:', filtered.length);
         
         this.state.relatedJobs = filtered.slice(0, 6);
-        console.log('[RELATED DEBUG] state.relatedJobs.length:', this.state.relatedJobs.length);
-        console.log('[RELATED DEBUG] state.relatedJobs:', this.state.relatedJobs);
       }
     } catch (error) {
-      console.error('[RELATED DEBUG] Error:', error);
+      console.error('Related jobs load error:', error);
       this.state.relatedJobs = [];
     } finally {
       this.state.relatedJobsLoading = false;
-      console.log('[RELATED DEBUG] Before render, relatedJobs.length:', this.state.relatedJobs.length);
       this.render();
-      console.log('[RELATED DEBUG] After render');
     }
   }
 
@@ -1084,9 +1064,6 @@ class CPAJobsApp {
   }
 
   renderRelatedJobs() {
-    console.log('[RELATED DEBUG] renderRelatedJobs called, length:', this.state.relatedJobs?.length);
-    console.log('[RELATED DEBUG] relatedJobsLoading:', this.state.relatedJobsLoading);
-    
     if (this.state.relatedJobsLoading) {
       return `
         <section class="related-jobs-section">
@@ -1099,11 +1076,10 @@ class CPAJobsApp {
     }
 
     if (!this.state.relatedJobs || this.state.relatedJobs.length === 0) {
-      console.log('[RELATED DEBUG] Empty state - returning empty string');
       return '';
     }
 
-    const html = `
+    return `
       <section class="related-jobs-section">
         <h2 class="related-jobs-title">Related Jobs</h2>
         <div class="related-jobs-grid">
@@ -1111,9 +1087,6 @@ class CPAJobsApp {
         </div>
       </section>
     `;
-    
-    console.log('[RELATED DEBUG] Generated HTML length:', html.length);
-    return html;
   }
 
   async goToPage(pageNum) {
