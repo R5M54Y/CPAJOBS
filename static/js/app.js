@@ -748,13 +748,13 @@ class CPAJobsApp {
         <h2>${totalCount} Jobs</h2>
         <p class="listing-subtitle">Find your next opportunity in accounting & finance</p>
         <div class="category-filters">
-          <button class="category-filter ${!this.state.selectedCategory ? 'active' : ''}" onclick="app.setSelectedCategory(null)">
+          <a href="/jobs/" class="category-filter ${!this.state.selectedCategory ? 'active' : ''}" onclick="event.preventDefault(); app.navigate('/jobs/')">
             All Jobs
-          </button>
+          </a>
           ${this.state.categories.map(cat => `
-            <button class="category-filter ${this.state.selectedCategory === cat.category_id ? 'active' : ''}" onclick="app.setSelectedCategory('${cat.category_id}')">
+            <a href="${this.generateCategoryUrl(cat.category_id, cat.slug)}" class="category-filter ${this.state.selectedCategory === cat.category_id ? 'active' : ''}" onclick="event.preventDefault(); app.navigate('${this.generateCategoryUrl(cat.category_id, cat.slug)}')">
               ${this.formatCategoryName(cat.category_id)}
-            </button>
+            </a>
           `).join('')}
         </div>
 
