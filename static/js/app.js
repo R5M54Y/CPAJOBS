@@ -73,7 +73,17 @@ class CPAJobsApp {
       this.state.currentView = 'categories';
       this.state.selectedCategory = null;
       this.state.currentPage = 1;
+      
+      // Parse query parameters from URL
+      const searchParams = new URLSearchParams(window.location.search);
       this.state.routeParams = {};
+      searchParams.forEach((value, key) => {
+        this.state.routeParams[key] = value;
+      });
+      
+      // Extract search query if present
+      this.state.searchQuery = searchParams.get('q') || null;
+      
       await this.loadCategories();
       this.render();
       return;
