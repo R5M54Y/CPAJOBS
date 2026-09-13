@@ -9,7 +9,13 @@ export const getOffers = async (request, config) => {
     const limit = parseInt(url.searchParams.get('limit')) || 20;
     const page = parseInt(url.searchParams.get('page')) || 1;
     const categoryId = url.searchParams.get('category_id');
+    const q = url.searchParams.get('q')?.trim() || null;
     const offset = (page - 1) * limit;
+
+    // If search keyword provided, perform search + discovery
+    if (q) {
+      return await searchOffers(request, config, { q, status, categoryId, limit, page, offset });
+    }
 
     // Build dynamic query based on filters
     let countQuery = 'SELECT COUNT(*) as count FROM offers WHERE status = ?';
@@ -53,6 +59,301 @@ export const getOffers = async (request, config) => {
     });
   }
 };
+
+/**
+ * Search offers by keyword (D1) + discover from Ashby
+ * @param {Object} request
+ * @param {Object} config
+ * @param {Object} params - { q, status, categoryId, limit, page, offset }
+ */
+async function searchOffers(request, config, params) {
+  const { q, status, categoryId, limit, page, offset } = params;
+
+  try {
+    // Step 1: Perform Ashby discovery (non-blocking - failures don't break search)
+    try {
+      await discoverAshbyJobs(config, q);
+    } catch (ashbyError) {
+      // Log Ashby failure but continue with D1 search
+      console.error(`Ashby discovery failed for q="${q}":`, ashbyError.message);
+      // Do NOT fail the request - D1 search continues normally
+    }
+
+    // Step 2: Search D1 by title with keyword
+    let countQuery = `SELECT COUNT(*) as count FROM offers 
+                      WHERE status = ? 
+                      AND LOWER(title) LIKE ?`;
+    let selectQuery = `SELECT * FROM offers 
+                       WHERE status = ? 
+                       AND LOWER(title) LIKE ?`;
+    let bindings = [status, `%${q.toLowerCase()}%`];
+
+    if (categoryId) {
+      countQuery += ' AND category_id = ?';
+      selectQuery += ' AND category_id = ?';
+      bindings.push(categoryId);
+    }
+
+    selectQuery += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+
+    // Get total count
+    const countResult = await config.db.prepare(countQuery)
+      .bind(...bindings).first();
+
+    const totalCount = countResult?.count || 0;
+
+    // Get paginated results
+    const result = await config.db.prepare(selectQuery)
+      .bind(...bindings, limit, offset).all();
+
+    return new Response(JSON.stringify({
+      offers: result.results || [],
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+      },
+    }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Search error:', error);
+    return new Response(JSON.stringify({
+      error: error.message,
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+/**
+ * Discover jobs from all Ashby boards by title search
+ * Uses existing Ashby boards from registry + reuses existing normalization logic
+ */
+async function discoverAshbyJobs(config, q) {
+  if (!q || q.length < 2) {
+    return; // Skip discovery for very short keywords
+  }
+
+  const ASHBY_API_BASE = 'https://api.ashbyhq.com/posting-api/job-board';
+  const DISCOVERY_TIMEOUT_MS = 5000; // 5 second timeout per board
+  const MAX_BOARDS = 5; // Limit concurrent board searches
+
+  try {
+    // Fetch active boards from registry
+    const boardsResult = await config.db.prepare(`
+      SELECT board_name, source_id FROM ashby_boards
+      WHERE status = 'active'
+      LIMIT ?
+    `).bind(MAX_BOARDS).all();
+
+    const boards = boardsResult.results || [];
+
+    if (boards.length === 0) {
+      console.log('No active Ashby boards configured for discovery');
+      return;
+    }
+
+    // Ensure Ashby source exists
+    const sourceId = 'ashby';
+    const existingSource = await config.db.prepare(
+      'SELECT id FROM offer_sources WHERE id = ?'
+    ).bind(sourceId).first();
+
+    if (!existingSource) {
+      await config.db.prepare(`
+        INSERT INTO offer_sources (id, name, type, status, created_at, updated_at)
+        VALUES (?, ?, 'api', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `).bind(sourceId, 'Ashby Public Jobs').run();
+    }
+
+    // Search each board with timeout
+    const promises = boards.map(board =>
+      Promise.race([
+        searchAshbyBoard(config, board, q, sourceId),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Board search timeout')), DISCOVERY_TIMEOUT_MS)
+        ),
+      ]).catch(err => {
+        console.warn(`Ashby board ${board.board_name} search failed:`, err.message);
+        return { discovered: 0, inserted: 0, skipped: 0, errors: [err.message] };
+      })
+    );
+
+    const results = await Promise.all(promises);
+    const totalDiscovered = results.reduce((sum, r) => sum + (r.discovered || 0), 0);
+    const totalInserted = results.reduce((sum, r) => sum + (r.inserted || 0), 0);
+
+    console.log(
+      `Ashby discovery for q="${q}": ${totalDiscovered} discovered, ${totalInserted} inserted`
+    );
+  } catch (err) {
+    console.error('Ashby discovery orchestration failed:', err.message);
+    throw err; // Re-throw for caller to handle gracefully
+  }
+}
+
+/**
+ * Search single Ashby board by job title
+ */
+async function searchAshbyBoard(config, board, q, sourceId) {
+  const ASHBY_API_BASE = 'https://api.ashbyhq.com/posting-api/job-board';
+  const stats = { discovered: 0, inserted: 0, skipped: 0, errors: [] };
+
+  try {
+    const url = `${ASHBY_API_BASE}/${board.board_name}?includeCompensation=true`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'CPA-JOBS-MVP/1.0 (Search Discovery)',
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ashby API ${response.status}: ${response.statusText}`);
+    }
+
+    const apiData = await response.json();
+
+    if (!apiData.jobs || !Array.isArray(apiData.jobs)) {
+      throw new Error('Invalid Ashby response: missing jobs array');
+    }
+
+    // Filter jobs by title match
+    const matchingJobs = apiData.jobs.filter(job =>
+      job.title && job.title.toLowerCase().includes(q.toLowerCase())
+    );
+
+    stats.discovered = matchingJobs.length;
+
+    // Process each matching job with deduplication
+    for (const job of matchingJobs) {
+      try {
+        const result = await upsertAshbyJob(config, job, board.board_name, sourceId);
+        if (result === 'imported') {
+          stats.inserted++;
+        } else {
+          stats.skipped++;
+        }
+      } catch (err) {
+        stats.errors.push(`Job ${job.id}: ${err.message}`);
+        stats.skipped++;
+      }
+    }
+  } catch (err) {
+    stats.errors.push(err.message);
+    throw err;
+  }
+
+  return stats;
+}
+
+/**
+ * Upsert Ashby job with deduplication
+ * Reuses existing normalization logic from ashby.js
+ * @returns {'imported' | 'skipped'}
+ */
+async function upsertAshbyJob(config, job, jobBoardName, sourceId) {
+  if (!job.id || !job.title) {
+    throw new Error('Missing required: id or title');
+  }
+
+  const externalId = String(job.id);
+
+  // Check if job already exists
+  const existing = await config.db.prepare(
+    'SELECT id FROM offers WHERE external_id = ? AND source_id = ?'
+  ).bind(externalId, sourceId).first();
+
+  if (existing) {
+    return 'skipped'; // Job already in D1, do not duplicate
+  }
+
+  // Extract and normalize job data (matching existing ashby.js logic)
+  const title = job.title ? job.title.trim().substring(0, 255) : '';
+  const description = job.descriptionPlain || job.description || job.descriptionHtml || '';
+  const descriptionHtml = job.descriptionHtml || '';
+
+  const primaryLocation = job.address?.postalAddress || {};
+  const locationCity = primaryLocation.addressLocality || null;
+  const locationState = primaryLocation.addressRegion || null;
+  const locationCountry = primaryLocation.addressCountry || 'USA';
+  const locationText = [locationCity, locationState, locationCountry]
+    .filter(Boolean)
+    .join(', ') || null;
+
+  const isRemote = job.isRemote === true;
+  const workplaceType = job.workplaceType || null;
+  const employmentType = job.employmentType || null;
+  const applyUrl = job.applyUrl || null;
+  const sourceUrl = job.jobUrl || null;
+  const publishedAt = job.publishedAt ? new Date(job.publishedAt).toISOString() : null;
+
+  const compensation = job.compensation;
+  const salaryMin = compensation?.value?.min || null;
+  const salaryMax = compensation?.value?.max || null;
+  const salaryCurrency = compensation?.currency || 'USD';
+  const salaryPeriod = compensation?.period || null;
+
+  // Determine category from department
+  let categoryId = 'cat-general';
+  if (job.department) {
+    const dept = job.department.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    categoryId = `cat-${dept}`;
+
+    // Ensure category exists
+    const catExists = await config.db.prepare(
+      'SELECT id FROM categories WHERE id = ?'
+    ).bind(categoryId).first();
+
+    if (!catExists) {
+      await config.db.prepare(`
+        INSERT INTO categories (id, name, slug, description, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `).bind(
+        categoryId,
+        job.department.substring(0, 100),
+        dept,
+        `${job.department} opportunities from Ashby`
+      ).run();
+    }
+  }
+
+  const offerId = `ashby-${externalId}`;
+  const sourceRaw = JSON.stringify({
+    id: job.id,
+    title: job.title,
+    department: job.department,
+    jobBoardName: jobBoardName,
+  });
+
+  // Insert new job
+  await config.db.prepare(`
+    INSERT INTO offers (
+      id, external_id, title, description, description_html,
+      url, apply_url, payout, payout_type,
+      category_id, source_id,
+      location, location_city, location_state, location_country, remote,
+      workplace_type, employment_type,
+      salary_min, salary_max, salary_currency, salary_period,
+      date_posted, source_raw,
+      status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).bind(
+    offerId, externalId, title, description, descriptionHtml,
+    sourceUrl || applyUrl, applyUrl, 0.0, 'none',
+    categoryId, sourceId,
+    locationText, locationCity, locationState, locationCountry, isRemote,
+    workplaceType, employmentType,
+    salaryMin, salaryMax, salaryCurrency, salaryPeriod,
+    publishedAt, sourceRaw
+  ).run();
+
+  return 'imported';
+}
 
 export const getOfferDetail = async (config, offerId) => {
   try {

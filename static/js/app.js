@@ -14,7 +14,8 @@ class CPAJobsApp {
       routeParams: {},
       paginationTotal: 0,
       currentPage: 1,
-      pageSize: 20
+      pageSize: 20,
+      searchQuery: null
     };
     this.baseUrl = '';
     this.init();
@@ -245,6 +246,16 @@ class CPAJobsApp {
       // Pass category_id to filter if selected
       if (this.state.selectedCategory) {
         params.category_id = this.state.selectedCategory;
+      }
+
+      // Pass search query if present in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const q = urlParams.get('q');
+      if (q) {
+        params.q = q;
+        this.state.searchQuery = q; // Store in state for display
+      } else {
+        this.state.searchQuery = null;
       }
       
       const offersResponse = await this.apiCall('/offers', params);
@@ -569,8 +580,8 @@ class CPAJobsApp {
             <h1>Find The Best Job For Your Future</h1>
             <p>It is a long established fact that a reader will be distracted by the readable.</p>
             <div class="search-container">
-              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
-              <button class="search-btn">Search</button>
+              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs" id="search-input-hero">
+              <button class="search-btn" onclick="app.handleSearch('search-input-hero')">Search</button>
             </div>
           </div>
         </section>
@@ -590,8 +601,8 @@ class CPAJobsApp {
             <h1>Find The Best Job For Your Future</h1>
             <p>It is a long established fact that a reader will be distracted by the readable.</p>
             <div class="search-container">
-              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
-              <button class="search-btn">Search</button>
+              <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs" id="search-input-hero-error">
+              <button class="search-btn" onclick="app.handleSearch('search-input-hero-error')">Search</button>
             </div>
           </div>
         </section>
@@ -613,9 +624,9 @@ class CPAJobsApp {
               <p class="hero-subtitle">Discover accounting and finance jobs from top employers. Start your career journey today.</p>
               
               <div class="search-box">
-                <form class="search-form" onsubmit="event.preventDefault(); app.navigate('/jobs/')">
+                <form class="search-form" onsubmit="event.preventDefault(); app.handleSearch('search-input-form')">
                   <div class="search-input-wrapper">
-                    <input type="text" class="search-input" placeholder="Job title or keyword" aria-label="Job title search">
+                    <input type="text" class="search-input" placeholder="Job title or keyword" aria-label="Job title search" id="search-input-form">
                   </div>
                   <button type="submit" class="search-btn">Find Jobs</button>
                 </form>
@@ -651,8 +662,8 @@ class CPAJobsApp {
           <p>It is a long established fact that a reader will be distracted by the readable.</p>
           
           <div class="search-container">
-            <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs">
-            <button class="search-btn" onclick="event.preventDefault(); app.navigate('/jobs/')">Search</button>
+            <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs" id="search-input-main">
+            <button class="search-btn" onclick="app.handleSearch('search-input-main')">Search</button>
           </div>
         </div>
       </section>
@@ -998,6 +1009,26 @@ class CPAJobsApp {
     this.state.routeParams.page = pageNum;
     await this.loadCategories();
     this.render();
+  }
+
+  handleSearch(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) {
+      console.error('Search input not found:', inputId);
+      return;
+    }
+
+    const keyword = input.value.trim();
+    
+    if (!keyword) {
+      // Empty search - navigate to all jobs
+      this.navigate('/jobs/');
+      return;
+    }
+
+    // Navigate to jobs with search query parameter
+    const encodedKeyword = encodeURIComponent(keyword);
+    this.navigate(`/jobs/?q=${encodedKeyword}`);
   }
 
   async handleOfferClick(offerId) {
