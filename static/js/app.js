@@ -90,6 +90,21 @@ class CPAJobsApp {
       this.render();
       return;
     }
+
+    // Privacy Policy route
+    if (pathname === '/privacy' || pathname === '/privacy/') {
+      this.state.currentView = 'privacy';
+      this.state.routeParams = {};
+      this.render();
+      return;
+    }
+
+    // Default to landing if no route matched
+    this.state.currentView = 'landing';
+    this.state.routeParams = {};
+    await this.loadLanding();
+    this.render();
+    return;
     
     // Legacy hash routing support
     if (hash) {
@@ -367,6 +382,85 @@ class CPAJobsApp {
     this.render();
   }
 
+  renderPrivacyPolicy() {
+    return `
+      <div class="privacy-policy-page">
+        <div class="privacy-policy-container">
+          <div class="privacy-header">
+            <h1>Privacy Policy</h1>
+            <p class="privacy-effective-date"><strong>Effective Date:</strong> September 13, 2026</p>
+          </div>
+          <div class="privacy-content">
+            <section class="privacy-section">
+              <p><strong>USA Jobs</strong> is a job discovery and listing platform that helps users explore employment opportunities from multiple employers. This Privacy Policy explains how we collect, use, and protect information when you visit and use our website.</p>
+            </section>
+            <section class="privacy-section">
+              <h2>1. Information We Collect</h2>
+              <h3>Information You Provide</h3>
+              <ul>
+                <li><strong>Search queries:</strong> When you search for jobs, we collect the keywords you enter.</li>
+                <li><strong>Browse history:</strong> We record which job listings you view and interact with.</li>
+                <li><strong>Click events:</strong> When you click "Apply" or navigate to an external job application, we record this action for analytics and tracking purposes.</li>
+              </ul>
+              <h3>Automatically Collected Information</h3>
+              <ul>
+                <li><strong>HTTP request data:</strong> IP address, user agent, browser type, operating system, and referrer information.</li>
+                <li><strong>Page activity:</strong> URL paths, search parameters, and navigation patterns within our site.</li>
+                <li><strong>Timestamps:</strong> When you access pages and perform actions.</li>
+              </ul>
+            </section>
+            <section class="privacy-section">
+              <h2>2. How We Use Information</h2>
+              <p>We use collected information for the following purposes:</p>
+              <ul>
+                <li>To provide and improve the job discovery platform.</li>
+                <li>To understand which job listings and categories are most relevant to users.</li>
+                <li>To analyze user search behavior and browsing patterns.</li>
+                <li>To track job application engagement for analytics and reporting.</li>
+                <li>To monitor platform health and prevent misuse.</li>
+              </ul>
+            </section>
+            <section class="privacy-section">
+              <h2>3. Job Listings and External Links</h2>
+              <p><strong>USA Jobs operates as a job discovery platform.</strong> When you click a job listing, you are redirected to an external employer website or job application platform. Once you leave USA Jobs, our Privacy Policy no longer applies. The external platform's privacy policy governs their collection and use of your information.</p>
+            </section>
+            <section class="privacy-section">
+              <h2>4. Click Tracking</h2>
+              <p>When you click "Apply" or interact with job listings, we record the job ID, title, your IP address, user agent, referrer, and timestamp. This data is used to measure engagement and improve the user experience.</p>
+            </section>
+            <section class="privacy-section">
+              <h2>5. Third-Party Services</h2>
+              <ul>
+                <li><strong>Cloudflare:</strong> We use Cloudflare for content delivery and hosting. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare's Privacy Policy</a>.</li>
+                <li><strong>Ashby:</strong> We integrate with Ashby's job posting API to discover and display job listings. See <a href="https://www.ashby.ai/privacy" target="_blank" rel="noopener">Ashby's Privacy Policy</a>.</li>
+              </ul>
+            </section>
+            <section class="privacy-section">
+              <h2>6. Data Retention</h2>
+              <p>We retain click and search activity data for up to 12 months. Aggregate anonymized data may be retained indefinitely.</p>
+            </section>
+            <section class="privacy-section">
+              <h2>7. Data Security</h2>
+              <p>We implement reasonable security measures including HTTPS encryption, secure database access controls, and security monitoring. However, no security system is impenetrable.</p>
+            </section>
+            <section class="privacy-section">
+              <h2>8. Children's Privacy</h2>
+              <p>USA Jobs is not directed to children under 13. We do not knowingly collect information from children under 13.</p>
+            </section>
+            <section class="privacy-section">
+              <h2>9. Changes to This Policy</h2>
+              <p>We may update this Privacy Policy from time to time. Your continued use of USA Jobs following updates constitutes acceptance of those changes.</p>
+            </section>
+            <section class="privacy-section">
+              <h2>10. Contact Us</h2>
+              <p>If you have questions about this Privacy Policy, please contact us through the footer link on this website.</p>
+            </section>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   async trackClick(offerId, userData = {}) {
     try {
       const payload = {
@@ -485,6 +579,9 @@ class CPAJobsApp {
       case 'verification-error':
         html = this.renderVerificationError();
         break;
+      case 'privacy':
+        html = this.renderPrivacyPolicy();
+        break;
       case 'admin':
         html = this.renderAdmin();
         break;
@@ -510,7 +607,15 @@ class CPAJobsApp {
     let twitterTitle = ogTitle;
     let twitterDescription = description;
 
-    if (this.state.currentView === 'offer-detail') {
+    if (this.state.currentView === 'privacy') {
+      title = 'Privacy Policy | USA Jobs';
+      description = 'Learn about USA Jobs privacy practices, data collection, and how we protect your information when you search for jobs.';
+      canonicalUrl = `${canonicalHostname}/privacy/`;
+      ogTitle = 'Privacy Policy | USA Jobs';
+      ogDescription = description;
+      twitterTitle = ogTitle;
+      twitterDescription = description;
+    } else if (this.state.currentView === 'offer-detail') {
       if (this.state.selectedOffer) {
         const job = this.state.selectedOffer;
         title = `${job.title} | USA Jobs`;
