@@ -65,10 +65,16 @@ export async function importAshbyJobs(config, jobBoardName, sourceId = null) {
     // Track active Ashby job IDs from this import
     const activeAshbyIds = new Set();
 
+    // Get company name from board registry
+    const boardResult = await config.db.prepare(
+      'SELECT company_name FROM ashby_boards WHERE board_name = ?'
+    ).bind(jobBoardName).first();
+    const companyName = boardResult?.company_name || jobBoardName;
+
     // Process each job
     for (const job of apiData.jobs) {
       try {
-        const result = await processJob(config, job, jobBoardName, ASHBY_SOURCE_ID);
+        const result = await processJob(config, job, jobBoardName, ASHBY_SOURCE_ID, companyName);
         activeAshbyIds.add(job.id);
 
         if (result === 'imported') {
@@ -134,7 +140,7 @@ async function ensureAshbySource(config, sourceId) {
  * Process single Ashby job
  * @returns {'imported' | 'updated' | 'skipped'}
  */
-async function processJob(config, job, jobBoardName, sourceId) {
+async function processJob(config, job, jobBoardName, sourceId, companyName) {
   // Validate required fields
   if (!job.id || !job.title) {
     throw new Error('Missing required: id or title');
@@ -271,6 +277,10 @@ async function processJob(config, job, jobBoardName, sourceId) {
     }
     // Note: 'team' column does not exist in schema, skip it
 
+    // Update company name
+    updates.push('company = ?');
+    bindings.push(companyName);
+
     updates.push('remote = ?');
     bindings.push(isRemote);
 
@@ -354,9 +364,9 @@ async function processJob(config, job, jobBoardName, sourceId) {
       date_posted,
       source_raw,
       secondary_locations,
-      company_logo, company_logo_source, company_logo_updated_at,
+      company, company_logo, company_logo_source, company_logo_updated_at,
       status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).bind(
     offerId, externalId, title, description, descriptionHtml,
     sourceUrl || applyUrl, applyUrl, payout, payoutType,
@@ -367,7 +377,7 @@ async function processJob(config, job, jobBoardName, sourceId) {
     publishedAt,
     sourceRaw,
     secondaryLocations,
-    companyLogo, companyLogoSource, companyLogo ? new Date().toISOString() : null
+    companyName, companyLogo, companyLogoSource, companyLogo ? new Date().toISOString() : null
   ).run();
 
   return 'imported';

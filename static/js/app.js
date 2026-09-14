@@ -856,11 +856,13 @@ class CPAJobsApp {
     const location = offer.location || [offer.location_city, offer.location_state, offer.location_country].filter(Boolean).join(', ') || 'Location not specified';
     const salary = offer.salary_min || offer.salary_max ? `$${offer.salary_min || offer.salary_max}${offer.salary_period ? '/' + offer.salary_period : ''}` : null;
     const applyUrl = offer.apply_url;
+    const company = offer.company || 'Company';
     
     return `
       <div class="job-card">
         <div class="job-card-header">
           <a href="${permalink}" class="job-title" onclick="event.preventDefault(); app.navigate('${permalink}')">${offer.title}</a>
+          <p class="job-company">${company}</p>
         </div>
         
         <div class="job-meta">
