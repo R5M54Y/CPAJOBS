@@ -9,11 +9,11 @@ export const ROUTES = {
   MANUAL_SYNC: '/api/manual-sync', // TEMPORARY for MVP verification
   LOGO_TEST: '/api/admin/logo-test', // TEMPORARY for logo testing
   LOGO_BACKFILL: '/api/admin/logo-backfill', // TEMPORARY for logo backfill
-  OFFERS: '/offers',
-  OFFERS_DETAIL: /^\/offers\/[\w-]+$/,
-  CATEGORIES: '/categories',
-  TRACK_CLICK: '/track/click',
-  APPLY: '/apply',
+  OFFERS: '/api/offers',
+  OFFERS_DETAIL: /^\/api\/offers\/[\w-]+$/,
+  CATEGORIES: '/api/categories',
+  TRACK_CLICK: '/api/track/click',
+  APPLY: '/api/apply',
   
   // SEO endpoints
   SITEMAP: '/sitemap.xml',
@@ -52,17 +52,14 @@ export const routeRequest = (pathname) => {
   }
   
   // API: Offers list
-  if (pathname === ROUTES.OFFERS && pathname.includes('=')) {
+  if (pathname.startsWith('/api/offers')) {
+    if (ROUTES.OFFERS_DETAIL.test(pathname)) {
+      // API: Offer detail /api/offers/{id}
+      const offerId = pathname.slice(12); // '/api/offers/'.length = 12
+      return { type: 'api_offer_detail', offerId };
+    }
+    // API: Offers list /api/offers or /api/offers?query
     return { type: 'api_offers', pathname };
-  }
-  if (pathname === ROUTES.OFFERS) {
-    return { type: 'api_offers', pathname };
-  }
-  
-  // API: Offer detail
-  if (ROUTES.OFFERS_DETAIL.test(pathname)) {
-    const offerId = pathname.slice(8);
-    return { type: 'api_offer_detail', offerId };
   }
   
   // API: Categories
