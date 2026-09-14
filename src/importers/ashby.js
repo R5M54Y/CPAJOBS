@@ -238,8 +238,8 @@ async function processJob(config, job, jobBoardName, sourceId, companyName) {
     const bindings = [];
 
     // Always update core fields
-    updates.push('title = ?', 'updated_at = CURRENT_TIMESTAMP', 'status = ?');
-    bindings.push(title, 'active');
+    updates.push('title = ?', 'updated_at = CURRENT_TIMESTAMP', 'status = ?', 'company = ?');
+    bindings.push(title, 'active', companyName);
 
     // Update descriptions (CRITICAL: preserve full Ashby descriptions)
     if (descriptionHtml) {
@@ -276,10 +276,6 @@ async function processJob(config, job, jobBoardName, sourceId, companyName) {
       bindings.push(categoryId);
     }
     // Note: 'team' column does not exist in schema, skip it
-
-    // Update company name
-    updates.push('company = ?');
-    bindings.push(companyName);
 
     updates.push('remote = ?');
     bindings.push(isRemote);
