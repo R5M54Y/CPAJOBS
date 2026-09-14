@@ -70,6 +70,8 @@ export async function importAshbyJobs(config, jobBoardName, sourceId = null) {
       'SELECT company_name FROM ashby_boards WHERE board_name = ?'
     ).bind(jobBoardName).first();
     const companyName = boardResult?.company_name || jobBoardName;
+    
+    console.log(`[ASHBY] Board: ${jobBoardName}, Company: ${companyName}, Registry result:`, boardResult);
 
     // Process each job
     for (const job of apiData.jobs) {
