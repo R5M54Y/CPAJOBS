@@ -240,8 +240,13 @@ async function processJob(config, job, jobBoardName, sourceId, companyName) {
     const bindings = [];
 
     // Always update core fields
-    updates.push('title = ?', 'updated_at = CURRENT_TIMESTAMP', 'status = ?', 'company = ?');
-    bindings.push(title, 'active', companyName);
+    updates.push('title = ?');
+    bindings.push(title);
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    updates.push('status = ?');
+    bindings.push('active');
+    updates.push('company = ?');
+    bindings.push(companyName);
 
     // Update descriptions (CRITICAL: preserve full Ashby descriptions)
     if (descriptionHtml) {
