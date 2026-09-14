@@ -63,17 +63,17 @@ export const routeRequest = (pathname) => {
   }
   
   // API: Categories
-  if (pathname === ROUTES.CATEGORIES) {
+  if (pathname === '/api/categories') {
     return { type: 'api_categories' };
   }
   
   // API: Track click
-  if (pathname === ROUTES.TRACK_CLICK) {
+  if (pathname === '/api/track/click') {
     return { type: 'api_track_click', pathname };
   }
   
   // API: Apply verification
-  if (pathname === ROUTES.APPLY) {
+  if (pathname === '/api/apply') {
     return { type: 'api_apply', pathname };
   }
   
