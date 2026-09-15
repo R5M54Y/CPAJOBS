@@ -740,7 +740,7 @@ class CPAJobsApp {
         <section class="hero">
           <div class="hero-container">
             <h1>Find The Best Job For Your Future</h1>
-            <p>It is a long established fact that a reader will be distracted by the readable.</p>
+            <p>Search thousands of opportunities from top employers across all industries and career levels.</p>
             <div class="search-container">
               <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs" id="search-input-hero">
               <button class="search-btn" onclick="app.handleSearch('search-input-hero')">Search</button>
@@ -761,7 +761,7 @@ class CPAJobsApp {
         <section class="hero">
           <div class="hero-container">
             <h1>Find The Best Job For Your Future</h1>
-            <p>It is a long established fact that a reader will be distracted by the readable.</p>
+            <p>Search thousands of opportunities from top employers across all industries and career levels.</p>
             <div class="search-container">
               <input type="text" class="search-input" placeholder="Search Jobs" aria-label="Search jobs" id="search-input-hero-error">
               <button class="search-btn" onclick="app.handleSearch('search-input-hero-error')">Search</button>
