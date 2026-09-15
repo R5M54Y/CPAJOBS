@@ -3,6 +3,7 @@ const fs = require('fs');
 // Read fresh files
 const appJs = fs.readFileSync('static/js/app.js', 'utf8');
 const indexHtml = fs.readFileSync('static/index.html', 'utf8');
+const styleCss = fs.readFileSync('static/css/style.css', 'utf8');
 
 // Read static handler
 let handler = fs.readFileSync('src/handlers/static.js', 'utf8');
@@ -17,8 +18,8 @@ function escapeString(str) {
 }
 
 // Sync INDEX_HTML
-const indexConstStart = 'const INDEX_HTML = \"';
-const indexConstEnd = '\";';
+const indexConstStart = 'const INDEX_HTML = "';
+const indexConstEnd = '";';
 const indexStartIdx = handler.indexOf(indexConstStart);
 const indexEndIdx = handler.indexOf(indexConstEnd, indexStartIdx);
 
@@ -38,9 +39,31 @@ console.log(`✓ Synced INDEX_HTML constant`);
 console.log(`  Source: ${indexHtml.length} chars`);
 console.log(`  Escaped: ${indexEscaped.length} chars`);
 
+// Sync STYLE_CSS (now on updated handler)
+const styleConstStart = 'const STYLE_CSS = "';
+const styleConstEnd = '";';
+const styleStartIdx = handler.indexOf(styleConstStart);
+const styleEndIdx = handler.indexOf(styleConstEnd, styleStartIdx);
+
+if (styleStartIdx === -1) {
+  console.error('ERROR: STYLE_CSS constant not found');
+  process.exit(1);
+}
+
+console.log(`Found STYLE_CSS at position ${styleStartIdx}, ends at ${styleEndIdx}`);
+
+const styleBefore = handler.substring(0, styleStartIdx + styleConstStart.length);
+const styleAfter = handler.substring(styleEndIdx);
+const styleEscaped = escapeString(styleCss);
+handler = styleBefore + styleEscaped + styleAfter;
+
+console.log(`✓ Synced STYLE_CSS constant`);
+console.log(`  Source: ${styleCss.length} chars`);
+console.log(`  Escaped: ${styleEscaped.length} chars`);
+
 // Sync APP_JS (now on updated handler)
-const appConstStart = 'const APP_JS = \"';
-const appConstEnd = '\";';
+const appConstStart = 'const APP_JS = "';
+const appConstEnd = '";';
 const appStartIdx = handler.indexOf(appConstStart);
 const appEndIdx = handler.indexOf(appConstEnd, appStartIdx);
 
