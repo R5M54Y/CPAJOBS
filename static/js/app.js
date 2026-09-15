@@ -181,7 +181,7 @@ class CPAJobsApp {
     
     // If not found in current offers, load all categories and search
     try {
-      const response = await this.apiCall('/categories');
+      const response = await this.apiCall('/api/categories');
       if (response.ok) {
         const data = await response.json();
         const categories = data.categories || [];
@@ -234,14 +234,14 @@ class CPAJobsApp {
       this.setLoading(true);
       this.state.error = null;
 
-      const response = await this.apiCall('/offers', { status: 'active', limit: 6 });
+      const response = await this.apiCall('/api/offers', { status: 'active', limit: 6 });
       if (response.ok) {
         const data = await response.json();
         this.state.offers = data.offers || [];
         this.state.paginationTotal = data.pagination?.total || 0;
       }
 
-      const categoriesResponse = await this.apiCall('/categories');
+      const categoriesResponse = await this.apiCall('/api/categories');
       if (categoriesResponse.ok) {
         const data = await categoriesResponse.json();
         this.state.categories = data.categories || [];
@@ -260,7 +260,7 @@ class CPAJobsApp {
       this.setLoading(true);
       this.state.error = null;
 
-      const response = await this.apiCall('/categories');
+      const response = await this.apiCall('/api/categories');
       if (response.ok) {
         const data = await response.json();
         this.state.categories = data.categories || [];
@@ -285,7 +285,7 @@ class CPAJobsApp {
         this.state.searchQuery = null;
       }
       
-      const offersResponse = await this.apiCall('/offers', params);
+      const offersResponse = await this.apiCall('/api/offers', params);
       if (offersResponse.ok) {
         const data = await offersResponse.json();
         this.state.offers = data.offers || [];
@@ -356,7 +356,7 @@ class CPAJobsApp {
       keyword = keyword.replace(/,.*$/, '').trim(); // Remove everything after comma
       
       const limit = 10; // Request 10 to ensure 6 after filtering current job
-      const response = await this.apiCall('/offers', { q: keyword, limit });
+      const response = await this.apiCall('/api/offers', { q: keyword, limit });
       
       if (response.ok) {
         const data = await response.json();
