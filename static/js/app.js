@@ -384,17 +384,17 @@ class CPAJobsApp {
 
   renderPrivacyPolicy() {
     return `
-      <div class="privacy-policy-page">
-        <div class="privacy-policy-container">
-          <div class="privacy-header">
+      <div class="page-container">
+        <div class="content-wrapper">
+          <div class="page-header">
             <h1>Privacy Policy</h1>
-            <p class="privacy-effective-date"><strong>Effective Date:</strong> September 13, 2026</p>
+            <p class="page-subtitle"><strong>Effective Date:</strong> September 13, 2026</p>
           </div>
-          <div class="privacy-content">
-            <section class="privacy-section">
+          <div class="page-content">
+            <section class="content-section">
               <p><strong>USA Jobs</strong> is a job discovery and listing platform that helps users explore employment opportunities from multiple employers. This Privacy Policy explains how we collect, use, and protect information when you visit and use our website.</p>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>1. Information We Collect</h2>
               <h3>Information You Provide</h3>
               <ul>
@@ -409,7 +409,7 @@ class CPAJobsApp {
                 <li><strong>Timestamps:</strong> When you access pages and perform actions.</li>
               </ul>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>2. How We Use Information</h2>
               <p>We use collected information for the following purposes:</p>
               <ul>
@@ -420,38 +420,38 @@ class CPAJobsApp {
                 <li>To monitor platform health and prevent misuse.</li>
               </ul>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>3. Job Listings and External Links</h2>
               <p><strong>USA Jobs operates as a job discovery platform.</strong> When you click a job listing, you are redirected to an external employer website or job application platform. Once you leave USA Jobs, our Privacy Policy no longer applies. The external platform's privacy policy governs their collection and use of your information.</p>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>4. Click Tracking</h2>
               <p>When you click "Apply" or interact with job listings, we record the job ID, title, your IP address, user agent, referrer, and timestamp. This data is used to measure engagement and improve the user experience.</p>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>5. Third-Party Services</h2>
               <ul>
                 <li><strong>Cloudflare:</strong> We use Cloudflare for content delivery and hosting. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare's Privacy Policy</a>.</li>
                 <li><strong>Ashby:</strong> We integrate with Ashby's job posting API to discover and display job listings. See <a href="https://www.ashby.ai/privacy" target="_blank" rel="noopener">Ashby's Privacy Policy</a>.</li>
               </ul>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>6. Data Retention</h2>
               <p>We retain click and search activity data for up to 12 months. Aggregate anonymized data may be retained indefinitely.</p>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>7. Data Security</h2>
               <p>We implement reasonable security measures including HTTPS encryption, secure database access controls, and security monitoring. However, no security system is impenetrable.</p>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>8. Children's Privacy</h2>
               <p>USA Jobs is not directed to children under 13. We do not knowingly collect information from children under 13.</p>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>9. Changes to This Policy</h2>
               <p>We may update this Privacy Policy from time to time. Your continued use of USA Jobs following updates constitutes acceptance of those changes.</p>
             </section>
-            <section class="privacy-section">
+            <section class="content-section">
               <h2>10. Contact Us</h2>
               <p>If you have questions about this Privacy Policy, please contact us through the footer link on this website.</p>
             </section>
