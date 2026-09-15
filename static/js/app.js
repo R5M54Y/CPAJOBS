@@ -599,9 +599,9 @@ class CPAJobsApp {
   updateSeoMetadata() {
     const canonicalHostname = 'https://usajobs.usajobs.workers.dev';
     let title = 'USA Jobs';
-    let description = 'Find accounting and finance job opportunities. Browse high-paying CPA positions from top employers.';
+    let description = 'Discover professional job opportunities across all industries. Browse positions in engineering, data science, design, legal, marketing, sales, and more from top employers.';
     let canonicalUrl = `${canonicalHostname}/`;
-    let ogTitle = 'USA Jobs | Accounting & Finance Opportunities';
+    let ogTitle = 'USA Jobs | Professional Job Opportunities';
     let ogDescription = description;
     let ogType = 'website';
     let twitterTitle = ogTitle;
@@ -634,14 +634,14 @@ class CPAJobsApp {
     } else if (this.state.currentView === 'landing') {
       if (window.location.pathname.startsWith('/jobs')) {
         title = 'Jobs | USA Jobs';
-        description = 'Browse available accounting and finance job opportunities. Find your next career move.';
+        description = 'Browse available professional job opportunities across all industries. Find your next career move.';
         canonicalUrl = `${canonicalHostname}/jobs/`;
         ogTitle = 'Available Jobs | USA Jobs';
       } else {
-        title = 'USA Jobs | Accounting & Finance Jobs';
-        description = 'Find accounting and finance job opportunities. Browse high-paying CPA positions from top employers.';
-        canonicalUrl = `${canonicalHostname}/`;
-        ogTitle = 'USA Jobs | Accounting & Finance Opportunities';
+        title = 'USA Jobs | Professional Job Opportunities';
+        description = 'Discover professional job opportunities across all industries. Browse positions in engineering, data science, design, legal, marketing, sales, and more from top employers.';
+        
+        ogTitle = 'USA Jobs | Professional Job Opportunities';
       }
     }
 
@@ -750,7 +750,7 @@ class CPAJobsApp {
         
         <section class="section">
           <h2 class="section-title">RECENT JOBS</h2>
-          <p class="section-subtitle">Browse through our latest accounting and finance opportunities from top employers</p>
+          <p class="section-subtitle">Browse through our latest professional opportunities from top employers</p>
           <div class="loading-message">Loading opportunities...</div>
         </section>
       `;
@@ -771,7 +771,7 @@ class CPAJobsApp {
         
         <section class="section">
           <h2 class="section-title">RECENT JOBS</h2>
-          <p class="section-subtitle">Browse through our latest accounting and finance opportunities from top employers</p>
+          <p class="section-subtitle">Browse through our latest professional opportunities from top employers</p>
           <div class="error-message">Error loading jobs: ${this.state.error}</div>
         </section>
       `;
@@ -783,7 +783,7 @@ class CPAJobsApp {
           <div class="hero-container">
             <div class="hero-content">
               <h1 class="hero-title">Find Your Next Opportunity</h1>
-              <p class="hero-subtitle">Discover accounting and finance jobs from top employers. Start your career journey today.</p>
+              <p class="hero-subtitle">Discover professional opportunities from top employers across all industries. Start your career journey today.</p>
               
               <div class="search-box">
                 <form class="search-form" onsubmit="event.preventDefault(); app.handleSearch('search-input-form')">
@@ -799,7 +799,7 @@ class CPAJobsApp {
         
         <section class="section">
           <h2 class="section-title">RECENT JOBS</h2>
-          <p class="section-subtitle">Browse through our latest accounting and finance opportunities from top employers</p>
+          <p class="section-subtitle">Browse through our latest professional opportunities from top employers</p>
           <div class="no-results">No jobs available at the moment. Check back soon!</div>
         </section>
       `;
@@ -921,7 +921,7 @@ class CPAJobsApp {
     return `
       <div class="categories-container">
         <h2>${totalCount} Jobs</h2>
-        <p class="listing-subtitle">Find your next opportunity in accounting & finance</p>
+        <p class="listing-subtitle">Find your next professional opportunity</p>
         <div class="category-filters">
           <a href="/jobs/" class="category-filter ${!this.state.selectedCategory ? 'active' : ''}" onclick="event.preventDefault(); app.navigate('/jobs/')">
             All Jobs
