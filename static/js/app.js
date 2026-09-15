@@ -1021,7 +1021,6 @@ class CPAJobsApp {
           <div class="job-content-grid">
             
             <aside class="job-sidebar">
-              <script src="https://gist.github.com/R5M54Y/959a625a3e3d80853e7635b5219d87a4.js"></script>
               
               <div class="sidebar-card apply-card">
                 ${applyUrl ? `<button type="button" class="apply-button" onclick="app.handleOfferClick('${job.id}')">Apply for this Position</button>` : `<button class="apply-button" disabled style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>`}
