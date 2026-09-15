@@ -832,7 +832,7 @@ class CPAJobsApp {
       
       <section class="section jobs-section">
         <h2 class="section-title">RECENT JOBS</h2>
-        <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+        <p class="section-subtitle">Browse through our latest accounting and finance opportunities from top employers</p>
         
         <div class="jobs-grid">
           ${this.state.offers.slice(0, 10).map(offer => this.renderJobCard(offer)).join('')}
