@@ -750,7 +750,7 @@ class CPAJobsApp {
         
         <section class="section">
           <h2 class="section-title">RECENT JOBS</h2>
-          <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+          <p class="section-subtitle">Browse through our latest accounting and finance opportunities from top employers</p>
           <div class="loading-message">Loading opportunities...</div>
         </section>
       `;
@@ -771,7 +771,7 @@ class CPAJobsApp {
         
         <section class="section">
           <h2 class="section-title">RECENT JOBS</h2>
-          <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+          <p class="section-subtitle">Browse through our latest accounting and finance opportunities from top employers</p>
           <div class="error-message">Error loading jobs: ${this.state.error}</div>
         </section>
       `;
@@ -799,7 +799,7 @@ class CPAJobsApp {
         
         <section class="section">
           <h2 class="section-title">RECENT JOBS</h2>
-          <p class="section-subtitle">Mauris ut cursus nunc. Morbi eleifend, ligula at consectetur vehicula</p>
+          <p class="section-subtitle">Browse through our latest accounting and finance opportunities from top employers</p>
           <div class="no-results">No jobs available at the moment. Check back soon!</div>
         </section>
       `;
