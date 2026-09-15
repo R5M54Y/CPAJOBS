@@ -875,6 +875,34 @@ footer {
   padding: 60px 0 40px;
   font-size: 13px;
   line-height: 1.8;
+  text-align: center;
+}
+
+footer p {
+  margin: 0 0 16px 0;
+}
+
+footer nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+footer nav li {
+  display: inline;
+}
+
+footer nav a {
+  color: var(--medium-gray-lighter);
+  text-decoration: none;
+}
+
+footer nav a:hover {
+  color: var(--white);
 }
 
 .footer-content {
