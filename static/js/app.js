@@ -315,7 +315,7 @@ class CPAJobsApp {
     this.state.error = null;
 
     try {
-      const response = await this.apiCall(`/offers/${offerId}`);
+      const response = await this.apiCall(`/api/offers/${offerId}`);
       if (response.ok) {
         const data = await response.json();
         this.state.selectedOffer = data;
