@@ -70,6 +70,13 @@ export const generatePagesSitemap = async (config, canonicalHostname) => {
     xml += '    <priority>0.9</priority>\n';
     xml += '  </url>\n';
     
+    // Privacy Policy
+    xml += '  <url>\n';
+    xml += `    <loc>${escapeXml(baseUrl)}/privacy/</loc>\n`;
+    xml += '    <changefreq>monthly</changefreq>\n';
+    xml += '    <priority>0.5</priority>\n';
+    xml += '  </url>\n';
+    
     // Category landing pages (only if they have active jobs)
     const categoriesResult = await config.db.prepare(
       'SELECT DISTINCT category_id FROM offers WHERE status = "active"'
