@@ -595,13 +595,21 @@ class CPAJobsApp {
         // Inject ad script after render (innerHTML scripts are inert)
         const adContainer = document.getElementById('ad-script-placeholder');
         if (adContainer) {
-          const s1 = document.createElement('script');
-          s1.textContent = 'atOptions = {"key":"913ad3e95e3ada782afe32dfaf0930db","format":"iframe","height":250,"width":300,"params":{}}';
-          document.body.appendChild(s1);
-          const s2 = document.createElement('script');
-          s2.src = '//s10.histats.com/js15_as.js';
-          s2.async = true;
-          document.body.appendChild(s2);
+          // HighRevenueFormat ad script
+          const adScript = document.createElement('script');
+          adScript.src = 'https://www.highrevenueformat.com/913ad3e95e3ada782afe32dfaf0930db/invoke.js';
+          adScript.async = true;
+          document.body.appendChild(adScript);
+
+          // Histats tracking script
+          const histatsScript = document.createElement('script');
+          histatsScript.textContent = 'atOptions = {"key":"913ad3e95e3ada782afe32dfaf0930db","format":"iframe","height":250,"width":300,"params":{}}';
+          document.body.appendChild(histatsScript);
+      
+          const histatsScript2 = document.createElement('script');
+          histatsScript2.src = '//s10.histats.com/js15_as.js';
+          histatsScript2.async = true;
+          document.body.appendChild(histatsScript2);
         }
 
         // Update SEO metadata after render
