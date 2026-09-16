@@ -1230,13 +1230,12 @@ class CPAJobsApp {
       console.error('No apply URL found for offer:', offerId);
       return false;
     }
-
     // Verify apply URL before redirect
-    try {
-      const verifyResponse = await this.apiCall(`/apply?id=${encodeURIComponent(offerId)}&url=${encodeURIComponent(offer.apply_url)}`);
-      const verifyResult = await verifyResponse.json();
+        try {
+          const verifyResponse = await this.apiCall(`/api/apply?id=${encodeURIComponent(offerId)}&url=${encodeURIComponent(offer.apply_url)}`);
+          const verifyResult = await verifyResponse.json();
 
-      // ONLY expired: true means job has expired
+          // ONLY expired: true means job has expired
       if (verifyResult.expired === true) {
         // Job application URL returned 404 - show expired state
         this.state.currentView = 'job-expired';
