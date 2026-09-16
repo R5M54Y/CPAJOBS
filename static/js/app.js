@@ -1022,6 +1022,19 @@ class CPAJobsApp {
             
             <aside class="job-sidebar">
               
+              <div class="ad-slot">
+              <script>
+              atOptions = {
+                'key' : '913ad3e95e3ada782afe32dfaf0930db',
+                'format' : 'iframe',
+                'height' : 250,
+                'width' : 300,
+                'params' : {}
+              };
+              </script>
+              <script src="https://www.highrevenueformat.com/913ad3e95e3ada782afe32dfaf0930db/invoke.js"></script>
+              </div>
+
               <div class="sidebar-card apply-card">
                 ${applyUrl ? `<button type="button" class="apply-button" onclick="app.handleOfferClick('${job.id}')">Apply for this Position</button>` : `<button class="apply-button" disabled style="opacity: 0.5; cursor: not-allowed;">Application Link Not Available</button>`}
                 <p class="apply-note">You will be redirected to the application page.</p>
