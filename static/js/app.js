@@ -880,7 +880,7 @@ class CPAJobsApp {
         
         <div class="job-footer">
           ${salary ? `<span class="job-salary">${salary}</span>` : '<span></span>'}
-          ${applyUrl ? `<button type="button" class="apply-btn" onclick="event.stopPropagation(); app.handleOfferClick('${offer.id}')">Apply Now</button>` : '<button class="apply-btn" disabled>Apply</button>'}
+          ${applyUrl ? `<button type="button" class="apply-btn" onclick="event.stopPropagation(); app.navigate('${permalink}')">View Job</button>` : '<button class="apply-btn" disabled>View Job</button>'}
         </div>
       </div>
     `;
