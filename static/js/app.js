@@ -594,22 +594,26 @@ class CPAJobsApp {
 
         // Inject ad script after render (innerHTML scripts are inert)
         const adContainer = document.getElementById('ad-script-placeholder');
-        if (adContainer) {
-          // HighRevenueFormat ad script - injected into ad container
-          const adScript = document.createElement('script');
-          adScript.src = 'https://www.highrevenueformat.com/913ad3e95e3ada782afe32dfaf0930db/invoke.js';
-          adScript.async = true;
-          adContainer.appendChild(adScript);
-
-          // Histats tracking script - injected into body for proper tracking
-          const histatsScript = document.createElement('script');
-          histatsScript.textContent = 'atOptions = {"key":"913ad3e95e3ada782afe32dfaf0930db","format":"iframe","height":250,"width":300,"params":{}}';
-          document.body.appendChild(histatsScript);
+    // Inject ad script after render (innerHTML scripts are inert)
+    const adContainer = document.getElementById("ad-script-placeholder");
+    if (adContainer) {
+      const adScript = document.createElement("script");
+      adScript.src = "https://www.highrevenueformat.com/913ad3e95e3ada782afe32dfaf0930db/invoke.js";
+      adContainer.appendChild(adScript);
+      
++          // Histats tracking script - also injected into ad container for proper positioning
++          const histatsScript = document.createElement("script");
++          histatsScript.textContent = "atOptions = {"key":"913ad3e95e3ada782afe32dfaf0930db","format":"iframe","height":250,"width":300,"params":{}}";
++          adContainer.appendChild(histatsScript);
++
++        // Update SEO metadata after render
++        this.updateSeoMetadata();
+          adContainer.appendChild(histatsScript);
       
           const histatsScript2 = document.createElement('script');
           histatsScript2.src = '//s10.histats.com/js15_as.js';
           histatsScript2.async = true;
-          document.body.appendChild(histatsScript2);
+          adContainer.appendChild(histatsScript2);
         }
 
         // Update SEO metadata after render
