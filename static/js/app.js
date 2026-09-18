@@ -595,13 +595,13 @@ class CPAJobsApp {
         // Inject ad script after render (innerHTML scripts are inert)
         const adContainer = document.getElementById('ad-script-placeholder');
         if (adContainer) {
-          // HighRevenueFormat ad script
+          // HighRevenueFormat ad script - injected into ad container
           const adScript = document.createElement('script');
           adScript.src = 'https://www.highrevenueformat.com/913ad3e95e3ada782afe32dfaf0930db/invoke.js';
           adScript.async = true;
-          document.body.appendChild(adScript);
+          adContainer.appendChild(adScript);
 
-          // Histats tracking script
+          // Histats tracking script - injected into body for proper tracking
           const histatsScript = document.createElement('script');
           histatsScript.textContent = 'atOptions = {"key":"913ad3e95e3ada782afe32dfaf0930db","format":"iframe","height":250,"width":300,"params":{}}';
           document.body.appendChild(histatsScript);
